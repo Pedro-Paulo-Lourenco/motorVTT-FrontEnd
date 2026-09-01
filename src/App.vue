@@ -17,6 +17,7 @@ onBeforeMount(async () => {
 </script>
 
 <template>
+  <!--TODO colocar um botão secreto que redireciona pra um skibidi toilet -->
   <header>
     <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
 

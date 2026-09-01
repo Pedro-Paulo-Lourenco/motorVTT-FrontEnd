@@ -5,13 +5,25 @@ interface LoginCredentials {
     email: string;
     password: string;
 }
-
+interface cadCredentials {
+    nome: string;
+    email: string;
+    senha: string;
+}
 export const useAuthStore = defineStore('auth', {
     state: () => ({
         user: null,
         isAuthenticated: false,
     }),
     actions: {
+        async cadastrar(credentials: cadCredentials) {
+
+            const response = await api.post('/auth/cadastrar', credentials)
+            this.user = response.data.user;
+            this.isAuthenticated = true;
+
+            return response.data;
+        },
         async login(credentials: LoginCredentials) {
             // Faz a requisição HTTP (o cookie HttpOnly será injetado automaticamente pelo navegador)
             const response = await api.post('/auth/login', credentials);

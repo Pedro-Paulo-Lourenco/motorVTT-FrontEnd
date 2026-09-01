@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import {useAuthStore} from "@/stores/auth.ts";
 import HomeView from "@/views/HomeView.vue";
 import UserHomeView from "@/views/UserHomeView.vue";
 import LoginView from "@/views/LoginView.vue";
 import CadView from "@/views/CadView.vue";
+
 
 const routes = [
     {
@@ -35,12 +37,21 @@ const router = createRouter({
 
 // TODO token de login para gerenciar permissão de rotas
 router.beforeEach((to, from, next) => {
-    const isAuthenticated = localStorage.getItem('token') // Exemplo de verificação
+    // Exemplo de verificação
+    const authStore = useAuthStore()
 
     // Se a rota não for Login e o usuário não estiver autenticado
-    if (to.name !== 'Login' && !isAuthenticated) {
-        next({ name: 'Login' }) // Redireciona para o Login
-    } else {
+    if (!authStore.isAuthenticated) {
+        if (to.path == '/login') {
+            next()
+        }else if (to.path == '/cadastro') {
+            next()
+        }else if (to.path == '/') {
+            next()
+        }else{
+            next('/login')
+        }
+    }else {
         next() // Permite prosseguir para a página desejada
     }
 })
