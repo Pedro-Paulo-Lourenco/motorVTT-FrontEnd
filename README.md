@@ -1,42 +1,44 @@
-# untitled1
+# Sistema de Autenticação - Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Aplicação frontend desenvolvida com **Vue 3**, **TypeScript**, **Pinia** e **Vue Router**, utilizando arquitetura segura baseada em **Cookies HttpOnly**.
 
-## Recommended IDE Setup
+## 🛠️ Tecnologias Utilizadas
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- **Vue 3** (Composition API / `<script setup>`)
+- **TypeScript**
+- **Pinia** (Gerenciamento de Estado)
+- **Vue Router** (Proteção e navegação de rotas)
+- **Axios** (Comunicação HTTP)
+- **Vite** (Bundler e ambiente de desenvolvimento)
 
-## Recommended Browser Setup
+---
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## 📁 Estrutura da Documentação
 
-## Type Support for `.vue` Imports in TS
+Para entender a arquitetura, o fluxo de dados e o andamento do projeto, consulte a pasta [docs/](./docs/):
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+- [TODO.md](./docs/TODO.md) - Lista de tarefas e progresso de desenvolvimento.
+- [auth-flow.md](./docs/auth-flow.md) - Explicação do fluxo de login, cadastro e reidratação de sessão via Cookies HttpOnly. *(Em breve)*
+- [api-integration.md](./docs/api-integration.md) - Documentação dos serviços e endpoints consumidos. *(Em breve)*
 
-## Customize configuration
+---
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## 🚀 Como Executar o Projeto
 
-## Project Setup
+### Pré-requisitos
+Certifique-se de ter o **Node.js** instalado em sua máquina.
 
+### Instalação
 ```sh
 npm install
 ```
 
-### Compile and Hot-Reload for Development
-
+### Executar em Ambiente de Desenvolvimento
 ```sh
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
-
+### Compilar e Gerar Build de Produção
 ```sh
 npm run build
 ```

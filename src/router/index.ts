@@ -11,21 +11,25 @@ const routes = [
         path: "/",
         name: "Home",
         component: HomeView,
+        meta: {public: true}
     },
     {
         path: '/home',
         name: 'UserHome',
-        component: UserHomeView
+        component: UserHomeView,
+        meta: {requiresAuth: true}
     },
     {
         path: '/login',
         name: 'Login',
-        component: LoginView
+        component: LoginView,
+        meta: {requiresGuest: true}
     },
     {
         path: '/cadastro',
         name: 'Cadastro',
-        component: CadView
+        component: CadView,
+        meta: {requiresGuest: true}
     }
 ]
 
@@ -36,24 +40,26 @@ const router = createRouter({
 
 
 // TODO token de login para gerenciar permissão de rotas
-router.beforeEach((to, from, next) => {
-    // Exemplo de verificação
+router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
 
-    // Se a rota não for Login e o usuário não estiver autenticado
-    if (!authStore.isAuthenticated) {
-        if (to.path == '/login') {
-            next()
-        }else if (to.path == '/cadastro') {
-            next()
-        }else if (to.path == '/') {
-            next()
-        }else{
-            next('/login')
-        }
-    }else {
-        next() // Permite prosseguir para a página desejada
+    // 1. Se o app recarregou (F5), valida o cookie HttpOnly no backend uma vez
+    if (!authStore.isInitialized) {
+        await authStore.checkSession()
     }
+
+    // 2. Rota exige Login, mas o usuário NÃO está autenticado
+    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        return next('/login')
+    }
+
+    // 3. Rota exige ser Visitante (Login/Cadastro), mas o usuário JÁ está autenticado
+    if (to.meta.requiresGuest && authStore.isAuthenticated) {
+        return next('/home') // Redireciona o usuário logado para a área interna
+    }
+
+    // 4. Qualquer outra rota (como a Home "/") é liberada
+    next()
 })
 
 export default router // O router já vai com o guarda de navegação ativado

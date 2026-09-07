@@ -1,24 +1,26 @@
 import { defineStore } from 'pinia';
 import api from "@/services/api.ts";
+import type { LoginCredentials, RegisterPayload ,AuthResponse, User} from '@/types/auth';
 
-interface LoginCredentials {
-    email: string;
-    password: string;
+interface AuthState {
+    user : User | null;
+    isAuthenticated: boolean;
+    isInitialized: boolean;
 }
-interface cadCredentials {
-    nome: string;
-    email: string;
-    senha: string;
-}
+
+
+
 export const useAuthStore = defineStore('auth', {
-    state: () => ({
+    state: (): AuthState => ({
         user: null,
         isAuthenticated: false,
+        isInitialized: false,
     }),
     actions: {
-        async cadastrar(credentials: cadCredentials) {
 
-            const response = await api.post('/auth/cadastrar', credentials)
+        async cadastrar(credentials: RegisterPayload) {
+
+            const response = await api.post<AuthResponse>('/auth/cadastrar', credentials)
             this.user = response.data.user;
             this.isAuthenticated = true;
 
@@ -26,7 +28,7 @@ export const useAuthStore = defineStore('auth', {
         },
         async login(credentials: LoginCredentials) {
             // Faz a requisição HTTP (o cookie HttpOnly será injetado automaticamente pelo navegador)
-            const response = await api.post('/auth/login', credentials);
+            const response = await api.post<AuthResponse>('/auth/login', credentials);
 
             // Atualiza o estado global
             this.user = response.data.user;
@@ -39,8 +41,12 @@ export const useAuthStore = defineStore('auth', {
                 // Rota no Node que lê o cookie HttpOnly e retorna o usuário logado
                 const response = await api.get('/auth/me');
                 this.user = response.data.user;
+                this.isAuthenticated = true;
             } catch {
                 this.user = null; // Cookie inválido ou expirado
+                this.isAuthenticated = false;
+            } finally {
+                this.isInitialized = true;
             }
         }
     }
