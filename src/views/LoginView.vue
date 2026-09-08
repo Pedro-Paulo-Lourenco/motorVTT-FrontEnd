@@ -15,6 +15,22 @@ const isLoading = ref(false);
 
 async function handleLogin() {
   errorMessage.value = '';
+
+  if (!email.value.trim()) {
+    errorMessage.value = 'Informe seu e-mail.';
+    return;
+  }
+
+  if (!/^\S+@\S+\.\S+$/.test(email.value)) {
+    errorMessage.value = 'Informe um e-mail válido.';
+    return;
+  }
+
+  if (!password.value) {
+    errorMessage.value = 'Informe sua senha.';
+    return;
+  }
+
   isLoading.value = true;
   try {
     // 3. Chama a função que você moveu para a store
@@ -29,8 +45,10 @@ async function handleLogin() {
   } catch (error) {
     // Tratamento de erro visual fica aqui no componente
     if (axios.isAxiosError(error)) {
-      // Aqui dentro o TypeScript sabe exatamente o que é error.response
-      errorMessage.value = error.response?.data?.message || 'Erro ao fazer login.';
+      const status = error.response?.status;
+      errorMessage.value = status === 401 || status === 403
+        ? 'E-mail ou senha incorretos.'
+        : error.response?.data?.message || 'Não foi possível realizar o login.';
     } else {
       // Caso seja outro tipo de erro (ex: erro de sintaxe no código)
       errorMessage.value = 'Ocorreu um erro inesperado.';
@@ -45,13 +63,14 @@ async function handleLogin() {
 <template>
   <main class = "login_container">
     <h1>Login</h1>
-    <form class="login-form" @submit.prevent="handleLogin">
+    <form class="login-form" @submit.prevent="handleLogin" :aria-busy="isLoading">
       <label for="campo_email" class="escondido-visual">Email do Usuário:</label>
       <input type="email" name="campo_email" id="campo_email" v-model="email" placeholder="Email" :disabled="isLoading"/>
 
       <label for="campo_senha" class="escondido-visual">Senha do Usuário:</label>
       <input type="password" name="campo_senha" id="campo_senha" v-model="password" placeholder="Password" :disabled="isLoading"/>
       <br>
+      <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
       <button name="form_submit_button" class="form_submit_button" :disabled="isLoading">
         <span v-if="isLoading" class="spinner"></span>
         <span v-else>Entrar</span>
@@ -81,6 +100,10 @@ async function handleLogin() {
   min-height: 40px;
   padding: 8px 16px;
   cursor: pointer;
+}
+.form-error {
+  color: #b42318;
+  margin: 0 0 12px;
 }
 /* Animação do Spinner em CSS puro */
 .spinner {

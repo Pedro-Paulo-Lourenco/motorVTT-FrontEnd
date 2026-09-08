@@ -17,7 +17,17 @@ export const useAuthStore = defineStore('auth', {
         isInitialized: false,
     }),
     actions: {
-
+        clearSession() {
+            this.user = null
+            this.isAuthenticated = false
+        },
+        async logout() {
+            try {
+                await api.post('/auth/logout')
+            } finally {
+                this.clearSession()
+            }
+        },
         async cadastrar(credentials: RegisterPayload) {
 
             const response = await api.post<AuthResponse>('/auth/cadastrar', credentials)

@@ -27,7 +27,7 @@ Os endpoints da API são gerenciados e consumidos através do store de autentica
 ### 2. Cadastro
 * **Rota:** `POST /auth/cadastrar`
 * **Descrição:** Cria uma nova conta de usuário na aplicação.
-* **Payload:** `RegisterPayload` (`nome`, `email`, `password`, etc.)
+* **Payload:** `RegisterPayload` (`name`, `email`, `password`, etc.)
 * **Resposta:** `AuthResponse` com os dados do usuário recém-criado.
 
 ### 3. Verificar Sessão (Reidratação)

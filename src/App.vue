@@ -1,19 +1,8 @@
 <script setup lang="ts">
-import { onBeforeMount, ref } from "vue";
-import {useAuthStore} from "@/stores/auth.ts";
+import {  ref } from "vue";
 
-const authStore = useAuthStore();
 const isLoading = ref(true);
 
-onBeforeMount(async () => {
-  try{
-    await authStore.checkSession();
-  } catch(error){
-    console.log('Usuário não está logado ou cookie espirou');
-  } finally {
-    isLoading.value = false;
-  }
-})
 </script>
 
 <template>
