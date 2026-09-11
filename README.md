@@ -1,5 +1,5 @@
 # Sistema de Autenticação - Frontend
-
+<!-- TODO atualizar o readme -->
 Aplicação frontend desenvolvida com **Vue 3**, **TypeScript**, **Pinia** e **Vue Router**, utilizando arquitetura segura baseada em **Cookies HttpOnly**.
 
 ## 🛠️ Tecnologias Utilizadas
