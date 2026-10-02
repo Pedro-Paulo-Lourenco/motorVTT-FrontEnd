@@ -2,16 +2,18 @@
 import {ref, computed} from 'vue'
 import { useRouter } from 'vue-router'
 import {useAuthStore} from "@/stores/auth.ts";
+import type { RegisterPayload } from '@/types/auth';
 import axios from "axios";
 
 const router = useRouter()
 const authStore = useAuthStore();
 
 const form = ref({
-  name: '',
+  nome: '',
   email: '',
   password: '',
 })
+const registrationPayload = (): RegisterPayload => ({ ...form.value });
 const confirmPassword = ref('')
 
 const passwordMatch = computed(() => {
@@ -25,7 +27,7 @@ const isLoading = ref(false);
 async function handleCad(){
   errorMessage.value = '';
 
-  if (!form.value.name.trim()) {
+  if (!form.value.nome.trim()) {
     errorMessage.value = 'Informe seu nome.';
     return;
   }
@@ -35,8 +37,18 @@ async function handleCad(){
     return;
   }
 
-  if (form.value.password.length < 6) {
-    errorMessage.value = 'A senha deve ter pelo menos 6 caracteres.';
+  const password = form.value.password;
+
+  if (
+      password.length < 12 ||
+      password.length > 128 ||
+      !/[a-z]/.test(password) ||
+      !/[A-Z]/.test(password) ||
+      !/\d/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+  ) {
+    errorMessage.value =
+        'A senha deve ter de 12 a 128 caracteres, incluindo letra minúscula, maiúscula, número e símbolo.';
     return;
   }
 
@@ -48,13 +60,13 @@ async function handleCad(){
   isLoading.value = true;
   try{
     await new Promise((resolve) => setTimeout(resolve, 250));
-    await authStore.cadastrar(form.value)
+    await authStore.cadastrar(registrationPayload())
 
     await router.push('/home')
   }catch(error){
     if (axios.isAxiosError(error)) {
       // Aqui dentro o TypeScript sabe exatamente o que é error.response
-      errorMessage.value = error.response?.data?.message || 'Não foi possível realizar o cadastro.';
+      errorMessage.value = error.response?.data?.error?.message || error.response?.data?.message || 'Não foi possível realizar o cadastro.';
     } else {
       // Caso seja outro tipo de erro (ex: erro de sintaxe no código)
       errorMessage.value = 'Ocorreu um erro inesperado.';
@@ -71,7 +83,7 @@ async function handleCad(){
     <h1>Cadastro</h1>
     <form class="cad-form" @submit.prevent="handleCad" :aria-busy="isLoading">
       <label for="campo-nome" class="escondido-visual">Nome: </label>
-      <input type="text" name="name" id="campo-nome" v-model="form.name" placeholder="Nome" :disabled="isLoading" />
+      <input type="text" name="name" id="campo-nome" v-model="form.nome" placeholder="Nome" :disabled="isLoading" />
       <br>
       <label for="campo-email" class="escondido-visual">Email: </label>
       <input type="email" name="campo-email" id="campo-email" v-model="form.email" placeholder="Email" :disabled="isLoading"/>

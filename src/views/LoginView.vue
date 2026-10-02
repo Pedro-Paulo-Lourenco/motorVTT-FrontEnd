@@ -48,7 +48,7 @@ async function handleLogin() {
       const status = error.response?.status;
       errorMessage.value = status === 401 || status === 403
         ? 'E-mail ou senha incorretos.'
-        : error.response?.data?.message || 'Não foi possível realizar o login.';
+        : error.response?.data?.error?.message || error.response?.data?.message || 'Não foi possível realizar o login.';
     } else {
       // Caso seja outro tipo de erro (ex: erro de sintaxe no código)
       errorMessage.value = 'Ocorreu um erro inesperado.';

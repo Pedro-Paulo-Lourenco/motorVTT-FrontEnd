@@ -1,10 +1,13 @@
-// src/types/auth.ts
+export type UserStatus = 'PENDENTE' | 'ATIVO' | 'BLOQUEADO';
 
 export interface User {
     id: string;
-    name: string;
+    nome: string;
     email: string;
-    createdAt?: string;
+    status: UserStatus;
+    ultimoLogin: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface LoginCredentials {
@@ -13,11 +16,18 @@ export interface LoginCredentials {
 }
 
 export interface RegisterPayload extends LoginCredentials {
-    name: string;
+    nome: string;
 }
-
 
 export interface AuthResponse {
     user: User;
-    message?: string; // Opcional, caso a API envie uma mensagem de sucesso
+    accessToken: string;
+    accessTokenExpiresAt: string;
+}
+
+export interface ApiSuccess<T> {
+    success: true;
+    data: T;
+    message?: string;
+    correlationId?: string;
 }

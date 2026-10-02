@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import {  ref } from "vue";
+import { onMounted, nextTick, ref } from "vue";
+import router from "./router";
 
 const isLoading = ref(true);
+
+onMounted(async () => {
+  await router.isReady();
+  await nextTick();
+  isLoading.value = false;
+});
 
 </script>
 
 <template>
-  <!--TODO colocar um botão secreto que redireciona pra um skibidi toilet -->
   <header>
     <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
 

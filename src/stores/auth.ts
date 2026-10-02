@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import api from "@/services/api.ts";
-import type { LoginCredentials, RegisterPayload ,AuthResponse, User} from '@/types/auth';
+import api from '@/services/api.ts';
+import type { ApiSuccess, AuthResponse, LoginCredentials, RegisterPayload, User } from '@/types/auth';
 
 interface AuthState {
     user : User | null;
@@ -29,28 +29,27 @@ export const useAuthStore = defineStore('auth', {
             }
         },
         async cadastrar(credentials: RegisterPayload) {
-
-            const response = await api.post<AuthResponse>('/auth/cadastrar', credentials)
-            this.user = response.data.user;
+            const response = await api.post<ApiSuccess<AuthResponse>>('/auth/register', credentials)
+            this.user = response.data.data.user;
             this.isAuthenticated = true;
 
-            return response.data;
+            return response.data.data;
         },
         async login(credentials: LoginCredentials) {
             // Faz a requisição HTTP (o cookie HttpOnly será injetado automaticamente pelo navegador)
-            const response = await api.post<AuthResponse>('/auth/login', credentials);
+            const response = await api.post<ApiSuccess<AuthResponse>>('/auth/login', credentials);
 
             // Atualiza o estado global
-            this.user = response.data.user;
+            this.user = response.data.data.user;
             this.isAuthenticated = true;
 
-            return response.data; // Retorna os dados caso o componente precise de algo
+            return response.data.data;
         },
         async checkSession() {
             try {
                 // Rota no Node que lê o cookie HttpOnly e retorna o usuário logado
-                const response = await api.get('/auth/me');
-                this.user = response.data.user;
+                const response = await api.get<ApiSuccess<{ user: User }>>('/auth/me');
+                this.user = response.data.data.user;
                 this.isAuthenticated = true;
             } catch {
                 this.user = null; // Cookie inválido ou expirado
@@ -61,4 +60,3 @@ export const useAuthStore = defineStore('auth', {
         }
     }
 });
-
