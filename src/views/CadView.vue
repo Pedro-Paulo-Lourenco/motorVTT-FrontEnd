@@ -3,6 +3,7 @@ import {ref, computed} from 'vue'
 import { useRouter } from 'vue-router'
 import {useAuthStore} from "@/stores/auth.ts";
 import type { RegisterPayload } from '@/types/auth';
+import { userSchema } from '@motor-vtt/contracts';
 import axios from "axios";
 
 const router = useRouter()
@@ -27,12 +28,12 @@ const isLoading = ref(false);
 async function handleCad(){
   errorMessage.value = '';
 
-  if (!form.value.nome.trim()) {
-    errorMessage.value = 'Informe seu nome.';
+  if (!userSchema.shape.nome.safeParse(form.value.nome).success) {
+    errorMessage.value = 'Informe um nome com até 120 caracteres.';
     return;
   }
 
-  if (!form.value.email.trim() || !/^\S+@\S+\.\S+$/.test(form.value.email)) {
+  if (!userSchema.shape.email.safeParse(form.value.email.trim()).success) {
     errorMessage.value = 'Informe um e-mail válido.';
     return;
   }
@@ -42,13 +43,14 @@ async function handleCad(){
   if (
       password.length < 12 ||
       password.length > 128 ||
+      new TextEncoder().encode(password).length > 72 ||
       !/[a-z]/.test(password) ||
       !/[A-Z]/.test(password) ||
       !/\d/.test(password) ||
       !/[^A-Za-z0-9]/.test(password)
   ) {
     errorMessage.value =
-        'A senha deve ter de 12 a 128 caracteres, incluindo letra minúscula, maiúscula, número e símbolo.';
+        'A senha deve ter de 12 a 128 caracteres e no máximo 72 bytes, incluindo letra minúscula, maiúscula, número e símbolo.';
     return;
   }
 

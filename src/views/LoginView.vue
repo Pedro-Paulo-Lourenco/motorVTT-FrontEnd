@@ -2,6 +2,7 @@
 import {ref} from "vue";
 import { useRouter } from 'vue-router';
 import {useAuthStore} from "@/stores/auth.ts";
+import { userSchema } from '@motor-vtt/contracts';
 import axios from "axios";
 
 const router = useRouter();
@@ -21,7 +22,7 @@ async function handleLogin() {
     return;
   }
 
-  if (!/^\S+@\S+\.\S+$/.test(email.value)) {
+  if (!userSchema.shape.email.safeParse(email.value.trim()).success) {
     errorMessage.value = 'Informe um e-mail válido.';
     return;
   }

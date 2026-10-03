@@ -23,7 +23,7 @@ A store global do Pinia (`auth`) é a única fonte da verdade para o estado de a
 
 ### Principais Ações (`actions`):
 - **`login(credentials)`**: Envia as credenciais para `/auth/login`. O backend valida e injeta o cookie `HttpOnly`. A store atualiza `user` e `isAuthenticated = true`.
-- **`cadastrar(credentials)`**: Envia os dados para `/auth/cadastrar`, realizando o registro e logando automaticamente o usuário.
+- **`cadastrar(credentials)`**: Envia os dados para `/auth/register`, realizando o registro e logando automaticamente o usuário.
 - **`checkSession()`**: Faz uma requisição GET para `/auth/me`. O backend lê o cookie `HttpOnly` da requisição e retorna os dados atualizados do usuário. Caso o cookie seja inválido ou expirado, a store limpa o estado (`user = null`, `isAuthenticated = false`) e finaliza a inicialização (`isInitialized = true`).
 
 ---

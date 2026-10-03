@@ -4,6 +4,7 @@ import HomeView from "@/views/HomeView.vue";
 import UserHomeView from "@/views/UserHomeView.vue";
 import LoginView from "@/views/LoginView.vue";
 import CadView from "@/views/CadView.vue";
+import RoomView from "@/views/RoomView.vue";
 
 
 const routes = [
@@ -17,6 +18,12 @@ const routes = [
         path: '/home',
         name: 'UserHome',
         component: UserHomeView,
+        meta: {requiresAuth: true}
+    },
+    {
+        path: '/salas/:id',
+        name: 'Room',
+        component: RoomView,
         meta: {requiresAuth: true}
     },
     {

@@ -52,7 +52,7 @@ api.interceptors.response.use(
             }
         }
 
-        if ((status === 401 || status === 403) && !isAuthEndpoint(url)) {
+        if (status === 401 && !isAuthEndpoint(url)) {
             unauthorizedHandler?.()
         }
 

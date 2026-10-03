@@ -22,18 +22,49 @@ Os endpoints da API são gerenciados e consumidos através do store de autentica
 * **Rota:** `POST /auth/login`
 * **Descrição:** Autentica o usuário com e-mail e senha.
 * **Payload:** `LoginCredentials` (`email`, `password`)
-* **Resposta:** `AuthResponse` contendo as informações do usuário. O token/sessão é atribuído automaticamente pelo servidor via cookie `HttpOnly`.
+* **Resposta:** envelope `ApiSuccess<AuthResponse>` (`success: true`, `data.user`). O token de acesso e a sessão são enviados somente por cookies `HttpOnly`, não no JSON.
 
 ### 2. Cadastro
-* **Rota:** `POST /auth/cadastrar`
+* **Rota:** `POST /auth/register`
 * **Descrição:** Cria uma nova conta de usuário na aplicação.
-* **Payload:** `RegisterPayload` (`name`, `email`, `password`, etc.)
-* **Resposta:** `AuthResponse` com os dados do usuário recém-criado.
+* **Payload:** `RegisterPayload` (`nome`, `email`, `password`)
+* **Resposta:** envelope `ApiSuccess<AuthResponse>` com os dados do usuário recém-criado.
 
 ### 3. Verificar Sessão (Reidratação)
 * **Rota:** `GET /auth/me`
 * **Descrição:** Valida a sessão ativa lendo o cookie `HttpOnly` enviado pelo navegador.
-* **Resposta:** Retorna os dados do usuário (`User`) se a sessão for válida, ou um erro HTTP (ex: 401) se expirada/inválida.
+* **Resposta:** envelope `ApiSuccess<AuthResponse>` se a sessão for válida, ou um erro HTTP (ex: 401) se expirada/inválida.
+
+Os tipos `User`, `AuthResponse` e `ApiSuccess<T>` são importados de
+`@motor-vtt/contracts`. Os schemas `userSchema` e `authResponseSchema` validam
+respectivamente o usuário e o conteúdo de autenticação; credenciais e validações
+específicas de cada endpoint permanecem locais.
+
+## 🏠 Endpoints de Salas (`/rooms`)
+
+`VITE_API_URL` já inclui o prefixo `/api` (por exemplo,
+`http://localhost:3000/api`). Portanto, o cliente chama os caminhos abaixo sem
+repetir `/api`. Todas as operações exigem a sessão autenticada e usam o envelope
+`ApiSuccess<T>` (`success: true`, `data`):
+
+| Operação | Método e caminho | Payload | Dados em `data` |
+| --- | --- | --- | --- |
+| Listar salas das quais participa | `GET /rooms` | — | `Room[]` |
+| Criar sala | `POST /rooms` | `{ nome: string }` | `Room` |
+| Entrar por convite | `POST /rooms/join` | `{ codigoConvite: string }` | `Participant` |
+| Carregar lobby | `GET /rooms/:salaId` | — | `{ sala: Room, participantes: Participant[] }` |
+
+As entidades `Room`, `Participant`, `ApiSuccess<T>` e o schema
+`apiErrorResponseSchema` vêm de `@motor-vtt/contracts`. Os payloads de criação e
+entrada permanecem tipados localmente enquanto não forem exportados pela versão
+do contrato usada pelo frontend. O papel mostrado no lobby é lido do participante
+cujo `usuarioId` corresponde ao `id` da pessoa autenticada; a API nunca recebe
+identificadores ou papéis declarados pelo cliente.
+
+Erros usam `{ success: false, error: { code, message, ... } }`. A interface
+converte códigos conhecidos em mensagens adequadas e não apresenta detalhes
+internos do servidor. O endpoint de lobby verifica a participação; após atualizar
+a página, os dados são sempre buscados novamente pela API com o cookie de sessão.
 
 ---
 

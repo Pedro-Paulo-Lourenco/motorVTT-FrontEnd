@@ -1,14 +1,6 @@
-export type UserStatus = 'PENDENTE' | 'ATIVO' | 'BLOQUEADO';
+import type { ApiSuccess as ContractApiSuccess } from '@motor-vtt/contracts';
 
-export interface User {
-    id: string;
-    nome: string;
-    email: string;
-    status: UserStatus;
-    ultimoLogin: string | null;
-    createdAt: string;
-    updatedAt: string;
-}
+export type { AuthResponse, User, UserStatus } from '@motor-vtt/contracts';
 
 export interface LoginCredentials {
     email: string;
@@ -19,15 +11,4 @@ export interface RegisterPayload extends LoginCredentials {
     nome: string;
 }
 
-export interface AuthResponse {
-    user: User;
-    accessToken: string;
-    accessTokenExpiresAt: string;
-}
-
-export interface ApiSuccess<T> {
-    success: true;
-    data: T;
-    message?: string;
-    correlationId?: string;
-}
+export type ApiSuccess<T> = ContractApiSuccess<T>;

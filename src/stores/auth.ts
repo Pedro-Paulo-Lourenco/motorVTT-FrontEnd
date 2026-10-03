@@ -48,7 +48,7 @@ export const useAuthStore = defineStore('auth', {
         async checkSession() {
             try {
                 // Rota no Node que lê o cookie HttpOnly e retorna o usuário logado
-                const response = await api.get<ApiSuccess<{ user: User }>>('/auth/me');
+                const response = await api.get<ApiSuccess<AuthResponse>>('/auth/me');
                 this.user = response.data.data.user;
                 this.isAuthenticated = true;
             } catch {
