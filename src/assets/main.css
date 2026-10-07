@@ -1,9 +1,11 @@
 @import './base.css';
 
 #app {
+  width: 100%;
   max-width: 1280px;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0 2rem;
   font-weight: normal;
 }
 
@@ -12,24 +14,111 @@ a,
   text-decoration: none;
   color: hsla(160, 100%, 37%, 1);
   transition: 0.4s;
-  padding: 3px;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+.app-header nav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+.app-header nav a {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.4rem;
+  color: var(--color-heading);
+}
 
+.app-header nav a:hover,
+.app-header nav a.router-link-active {
+  color: hsla(160, 100%, 37%, 1);
+  background-color: hsla(160, 100%, 37%, 0.12);
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-button {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-heading);
+  background: var(--color-background);
+  font: inherit;
+  cursor: pointer;
+}
+
+.profile-button:hover,
+.profile-button[aria-expanded='true'] {
+  border-color: hsla(160, 100%, 37%, 1);
+}
+
+.profile-dropdown {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: grid;
+  min-width: 12rem;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-background);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 15%);
+}
+
+.profile-name {
+  overflow-wrap: anywhere;
+  color: var(--color-heading);
+  font-weight: 600;
+}
+
+.logout-button {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.35rem;
+  color: var(--color-heading);
+  background: var(--color-background);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background: var(--color-background-soft);
+}
+
+.logout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.logout-error {
+  width: min(100% - 2rem, 1280px);
+  margin: 0.75rem auto 0;
+  color: #b42318;
+}
+
+main {
+  padding: 2rem 0;
+}
+
+@media (max-width: 600px) {
   #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    padding: 0 1rem;
+  }
+
+  .app-header nav {
+    justify-content: center;
+    gap: 0.25rem;
   }
 }

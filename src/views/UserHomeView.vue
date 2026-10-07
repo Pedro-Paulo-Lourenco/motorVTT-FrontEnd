@@ -13,8 +13,6 @@ import {
 
 const authStore = useAuthStore();
 const router = useRouter();
-const isLoggingOut = ref(false);
-const errorMessage = ref('');
 const roomName = ref('');
 const inviteCode = ref('');
 const rooms = ref<Room[]>([]);
@@ -132,20 +130,6 @@ function openRoom(room: Room): void {
   void router.push({ name: 'Room', params: { id: room.id } });
 }
 
-async function handleLogout(): Promise<void> {
-  isLoggingOut.value = true;
-  errorMessage.value = '';
-
-  try {
-    await authStore.logout();
-  } catch {
-    errorMessage.value = 'Não foi possível encerrar a sessão no servidor. Você saiu deste dispositivo.';
-  } finally {
-    await router.replace('/login');
-    isLoggingOut.value = false;
-  }
-}
-
 onMounted(() => {
   void loadRooms();
 });
@@ -158,12 +142,7 @@ onMounted(() => {
         <h1>Suas salas</h1>
         <p v-if="authStore.user">Olá, {{ authStore.user.nome }}.</p>
       </div>
-      <button type="button" :disabled="isLoggingOut" @click="handleLogout">
-        {{ isLoggingOut ? 'Saindo...' : 'Sair' }}
-      </button>
     </header>
-
-    <p v-if="errorMessage" class="form-message error" role="alert">{{ errorMessage }}</p>
 
     <section class="room-actions" aria-label="Ações de sala">
       <form class="room-form" :aria-busy="activeAction === 'create'" @submit.prevent="createRoom">
@@ -189,7 +168,7 @@ onMounted(() => {
           type="button"
           @click="router.push({ name: 'Room', params: { id: createdRoomId } })"
         >
-          Abrir lobby
+          Abrir tabletop
         </button>
         <button type="submit" :disabled="activeAction !== null">
           {{ activeAction === 'create' ? 'Criando...' : 'Criar sala' }}
@@ -217,7 +196,7 @@ onMounted(() => {
           type="button"
           @click="router.push({ name: 'Room', params: { id: joinedRoomId } })"
         >
-          Abrir lobby
+          Abrir tabletop
         </button>
         <button type="submit" :disabled="activeAction !== null">
           {{ activeAction === 'join' ? 'Entrando...' : 'Entrar na sala' }}
@@ -238,7 +217,7 @@ onMounted(() => {
       <ul v-else class="room-list">
         <li v-for="room in rooms" :key="room.id">
           <span>{{ room.nome }}</span>
-          <button type="button" @click="openRoom(room)">Abrir lobby</button>
+          <button type="button" @click="openRoom(room)">Abrir tabletop</button>
         </li>
       </ul>
     </section>
