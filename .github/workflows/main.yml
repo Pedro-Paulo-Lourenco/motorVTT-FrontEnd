@@ -1,0 +1,41 @@
+name: Build Frontend para Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar tipos TypeScript
+        run: npm run type-check
+
+      - name: Compilar projeto
+        run: npm run build
+
+      - name: Publicar build no branch dist
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
+        with:
+          source-directory: '.'
+          destination-github-username: 'Pedro-Paulo-Lourenco'
+          destination-repository-name: 'motorVTT-FrontEnd'
+          user-email: 'github-actions@github.com'
+          user-name: 'GitHub Actions'
+          target-branch: 'dist'
+          create-target-branch: true
