@@ -142,6 +142,9 @@ onMounted(() => {
         <h1>Suas salas</h1>
         <p v-if="authStore.user">Olá, {{ authStore.user.nome }}.</p>
       </div>
+      <button type="button" @click="router.push({ name: 'SheetTemplateBuilder' })">
+        Criar template de ficha
+      </button>
     </header>
 
     <section class="room-actions" aria-label="Ações de sala">

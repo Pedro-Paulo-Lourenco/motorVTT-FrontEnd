@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { z } from 'zod';
@@ -16,6 +16,7 @@ import {
   type Room,
 } from '@motor-vtt/contracts';
 import api from '@/services/api.ts';
+import CharacterSheetDrawer from '@/components/sheet/CharacterSheetDrawer.vue';
 import { useAuthStore } from '@/stores/auth.ts';
 import { resolveTabletopSocketOrigin } from '@/tabletop/connection';
 import {
@@ -55,6 +56,7 @@ const chatDraft = ref('');
 const isSendingMessage = ref(false);
 const onlineUserIds = ref<string[]>([]);
 const selectedTokenId = ref<string | null>(null);
+const isSheetDrawerOpen = ref(false);
 const tokenName = ref('');
 const isLoading = ref(true);
 const isConnected = ref(false);
@@ -64,6 +66,7 @@ const connectionMessage = ref('');
 const operationMessage = ref('');
 let latestRequest = 0;
 let tabletopSocket: Socket | undefined;
+const socketRef = shallowRef<Socket | null>(null);
 let refreshInProgress: Promise<void> | undefined;
 let isDisposed = false;
 let refreshedAfterAuthError = false;
@@ -177,6 +180,7 @@ function configureSocket(roomId: string): void {
     withCredentials: true,
   });
   tabletopSocket = socket;
+  socketRef.value = socket;
 
   socket.on('connect', () => {
     isConnected.value = true;
@@ -270,6 +274,7 @@ async function loadRoom(id: unknown): Promise<void> {
   tabletopSocket?.removeAllListeners();
   tabletopSocket?.disconnect();
   tabletopSocket = undefined;
+  socketRef.value = null;
   isConnected.value = false;
   isRoomReady.value = false;
   room.value = null;
@@ -281,6 +286,7 @@ async function loadRoom(id: unknown): Promise<void> {
   chatDraft.value = '';
   onlineUserIds.value = [];
   selectedTokenId.value = null;
+  isSheetDrawerOpen.value = false;
   errorMessage.value = '';
   connectionMessage.value = '';
 
@@ -463,6 +469,7 @@ onBeforeUnmount(() => {
   tabletopSocket?.removeAllListeners();
   tabletopSocket?.disconnect();
   tabletopSocket = undefined;
+  socketRef.value = null;
 });
 </script>
 
@@ -535,7 +542,18 @@ onBeforeUnmount(() => {
                 <p class="eyebrow">Objetos da cena</p>
                 <h2 id="token-panel-heading">Tokens <span>{{ tokens.length }}</span></h2>
               </div>
-              <p v-if="selectedToken" class="selected-label">Selecionado: {{ selectedToken.nome }}</p>
+              <div v-if="selectedToken" class="selected-label">
+                <span>Selecionado: {{ selectedToken.nome }}</span>
+                <button
+                  v-if="selectedToken.characterSheetId"
+                  type="button"
+                  class="secondary-button"
+                  :disabled="!isRoomReady"
+                  @click="isSheetDrawerOpen = true"
+                >
+                  Abrir ficha
+                </button>
+              </div>
             </div>
 
             <form v-if="isMaster" class="token-controls" @submit.prevent="addToken">
@@ -672,6 +690,13 @@ onBeforeUnmount(() => {
           </section>
         </aside>
       </section>
+      <CharacterSheetDrawer
+        :open="isSheetDrawerOpen"
+        :sheet-id="selectedToken?.characterSheetId ?? null"
+        :room-id="room.id"
+        :socket="socketRef"
+        @close="isSheetDrawerOpen = false"
+      />
     </template>
   </main>
 </template>

@@ -5,6 +5,7 @@ import UserHomeView from "@/views/UserHomeView.vue";
 import LoginView from "@/views/LoginView.vue";
 import CadView from "@/views/CadView.vue";
 import RoomView from "@/views/RoomView.vue";
+import SheetTemplateBuilderView from "@/views/SheetTemplateBuilderView.vue";
 
 
 const routes = [
@@ -24,6 +25,12 @@ const routes = [
         path: '/salas/:id',
         name: 'Room',
         component: RoomView,
+        meta: {requiresAuth: true}
+    },
+    {
+        path: '/templates/fichas/novo',
+        name: 'SheetTemplateBuilder',
+        component: SheetTemplateBuilderView,
         meta: {requiresAuth: true}
     },
     {
