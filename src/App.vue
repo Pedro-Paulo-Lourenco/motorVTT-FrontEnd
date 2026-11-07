@@ -60,8 +60,9 @@ onBeforeUnmount(() => {
 <template>
   <header class="app-header">
     <nav aria-label="Navegação principal">
-      <router-link to="/">Início</router-link>
+      <router-link class="brand-link" to="/" exact-active-class="router-link-exact-active" aria-label="Ir para a homepage">VTT</router-link>
       <template v-if="authStore.isAuthenticated">
+        <router-link to="/home">Início</router-link>
         <router-link to="/biblioteca">Biblioteca</router-link><router-link to="/templates">Templates de Ficha</router-link>
         <div ref="profileMenu" class="profile-menu">
           <button
