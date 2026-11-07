@@ -9,6 +9,35 @@
   font-weight: normal;
 }
 
+#app:has(.tabletop-page) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+#app:has(.tabletop-page) > .app-header {
+  position: fixed;
+  z-index: 200;
+  top: 0;
+  right: 0;
+  left: 0;
+  color: #f4efdf;
+  background: #121b17;
+  box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 28%);
+}
+
+#app:has(.tabletop-page) > .app-header nav {
+  min-height: 4rem;
+  padding: 0.65rem 1.25rem;
+  border-bottom-color: rgb(255 255 255 / 12%);
+}
+
+#app:has(.tabletop-page) > main {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+}
+
 a,
 .green {
   text-decoration: none;

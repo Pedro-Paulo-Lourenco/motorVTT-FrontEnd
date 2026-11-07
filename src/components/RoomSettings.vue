@@ -93,3 +93,6 @@ onMounted(() => { void load(); });
 <style scoped>
 .settings-backdrop{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:1rem;background:#18251dcc}.settings-modal{display:grid;gap:1rem;width:min(100%,560px);max-height:90vh;overflow:auto;padding:1.4rem;border:1px solid var(--color-border);border-radius:.75rem;background:var(--color-background);box-shadow:0 1.5rem 4rem #0005}.settings-modal header,.settings-modal footer,.add-row,.template-list li{display:flex;align-items:center;justify-content:space-between;gap:.75rem}.settings-modal h2{margin:0}.close-button{padding:.1rem .5rem;font-size:1.5rem;background:transparent;color:inherit}.add-row select{flex:1;min-height:2.4rem;padding:.45rem}.template-list{display:grid;gap:.5rem;margin:0;padding:0;list-style:none}.template-list li{padding:.7rem;border-top:1px solid var(--color-border)}small{opacity:.7}.danger{background:#b42318}.secondary-button{color:inherit;background:transparent;border-color:var(--color-border)}button{min-height:2.4rem;padding:.45rem .8rem;border:1px solid transparent;border-radius:.4rem;color:#fff;background:#526c55;font:inherit;cursor:pointer}button:disabled{opacity:.55}.error-message{margin:0;color:#b42318}
 </style>
+<style scoped>
+.settings-backdrop { z-index: 100; }
+</style>

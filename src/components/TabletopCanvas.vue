@@ -47,13 +47,14 @@ let panOrigin: { pointerX: number; pointerY: number; cameraX: number; cameraY: n
 let draggingToken: { id: string; originX: number; originY: number; moved: boolean } | undefined;
 let wheelListener: ((event: WheelEvent) => void) | undefined;
 let resizeObserver: ResizeObserver | undefined;
+let gridRedrawFrame: number | undefined;
 
 function gridOptions(): GridConfig {
   return { ...DEMO_GRID_DEFAULTS, ...props.gridConfig };
 }
 
 function redrawGrid(): void {
-  if (!gridLayer) return;
+  if (!gridLayer || !application || !camera) return;
   gridLayer.clear();
   const config = gridOptions();
   if (!config.enabled) return;
@@ -61,12 +62,30 @@ function redrawGrid(): void {
   const size = config.size;
   const color = config.color ?? DEMO_GRID_DEFAULTS.color ?? '#e5d2a3';
   const opacity = config.opacity ?? DEMO_GRID_DEFAULTS.opacity ?? 0.28;
-  for (let x = 0; x <= MAP_WIDTH; x += size) {
-    gridLayer.moveTo(x, 0).lineTo(x, MAP_HEIGHT).stroke({ color, alpha: opacity, width: 1 });
+
+  // Draw in world space, using the current camera viewport instead of the
+  // background image bounds. This keeps the grid available around any map.
+  const topLeft = camera.toLocal(new Point(0, 0));
+  const bottomRight = camera.toLocal(new Point(application.screen.width, application.screen.height));
+  const startX = Math.floor(topLeft.x / size) * size - size;
+  const endX = Math.ceil(bottomRight.x / size) * size + size;
+  const startY = Math.floor(topLeft.y / size) * size - size;
+  const endY = Math.ceil(bottomRight.y / size) * size + size;
+
+  for (let x = startX; x <= endX; x += size) {
+    gridLayer.moveTo(x, startY).lineTo(x, endY).stroke({ color, alpha: opacity, width: 1 });
   }
-  for (let y = 0; y <= MAP_HEIGHT; y += size) {
-    gridLayer.moveTo(0, y).lineTo(MAP_WIDTH, y).stroke({ color, alpha: opacity, width: 1 });
+  for (let y = startY; y <= endY; y += size) {
+    gridLayer.moveTo(startX, y).lineTo(endX, y).stroke({ color, alpha: opacity, width: 1 });
   }
+}
+
+function scheduleGridRedraw(): void {
+  if (gridRedrawFrame !== undefined) return;
+  gridRedrawFrame = requestAnimationFrame(() => {
+    gridRedrawFrame = undefined;
+    redrawGrid();
+  });
 }
 
 function fitCamera(): void {
@@ -201,6 +220,7 @@ function onPointerMove(event: FederatedPointerEvent): void {
       panOrigin.cameraX + event.global.x - panOrigin.pointerX,
       panOrigin.cameraY + event.global.y - panOrigin.pointerY,
     );
+    scheduleGridRedraw();
   }
 }
 
@@ -237,6 +257,7 @@ function onWheel(event: WheelEvent): void {
     pointer.x - worldPoint.x * nextScale,
     pointer.y - worldPoint.y * nextScale,
   );
+  scheduleGridRedraw();
 }
 
 async function initializeCanvas(): Promise<void> {
@@ -292,9 +313,11 @@ async function initializeCanvas(): Promise<void> {
         app.stage.hitArea.height = app.screen.height;
       }
       if (!cameraHasBeenInitialized) fitCamera();
+      else scheduleGridRedraw();
     });
     resizeObserver.observe(hostElement);
     fitCamera();
+    redrawGrid();
   } catch {
     if (!disposed) emit('canvasError', 'Não foi possível carregar o mapa da demonstração.');
     if (application === app) {
@@ -324,6 +347,10 @@ onBeforeUnmount(() => {
   disposed = true;
   resizeObserver?.disconnect();
   resizeObserver = undefined;
+  if (gridRedrawFrame !== undefined) {
+    cancelAnimationFrame(gridRedrawFrame);
+    gridRedrawFrame = undefined;
+  }
   if (application) {
     if (wheelListener) application.canvas.removeEventListener('wheel', wheelListener);
     application.stage.off('pointerdown', onPointerDown);

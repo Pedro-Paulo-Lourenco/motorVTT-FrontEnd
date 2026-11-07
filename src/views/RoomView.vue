@@ -19,6 +19,8 @@ import {
 import api from '@/services/api.ts';
 import CharacterSheetDrawer from '@/components/sheet/CharacterSheetDrawer.vue';
 import RoomSettings from '@/components/RoomSettings.vue';
+import RightSidebarDock from '@/components/tabletop/RightSidebarDock.vue';
+import UserPresenceBar from '@/components/tabletop/UserPresenceBar.vue';
 import { useAuthStore } from '@/stores/auth.ts';
 import { resolveTabletopSocketOrigin } from '@/tabletop/connection';
 import {
@@ -62,6 +64,7 @@ const isSheetDrawerOpen = ref(false);
 const isRoomSettingsOpen = ref(false);
 const isSheetCreatorOpen = ref(false);
 const isLibraryImportOpen = ref(false);
+const activeDockTab = ref<'chat' | 'sheets' | 'tokens' | 'assets' | 'settings' | null>(null);
 const librarySheets = ref<Array<{ id: string; nome: string }>>([]);
 const libraryImportError = ref('');
 const isImportingSheet = ref(false);
@@ -84,6 +87,19 @@ const socketRef = shallowRef<Socket | null>(null);
 let refreshInProgress: Promise<void> | undefined;
 let isDisposed = false;
 let refreshedAfterAuthError = false;
+
+function closeTabletopOverlays(): void {
+  activeDockTab.value = null;
+  isSheetCreatorOpen.value = false;
+  isLibraryImportOpen.value = false;
+  isSheetDrawerOpen.value = false;
+  isRoomSettingsOpen.value = false;
+}
+
+function openCharacterSheet(): void {
+  closeTabletopOverlays();
+  isSheetDrawerOpen.value = true;
+}
 
 const currentParticipant = computed(() =>
   participants.value.find((participant) => participant.usuarioId === authStore.user?.id),
@@ -565,7 +581,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="session-badges">
-        <button v-if="isMaster" type="button" class="secondary-button" @click="isRoomSettingsOpen = true">
+        <button v-if="isMaster" type="button" class="secondary-button" @click="closeTabletopOverlays(); isRoomSettingsOpen = true">
           Configurações
         </button>
         <span v-if="currentParticipant" class="role-badge">
@@ -618,6 +634,8 @@ onBeforeUnmount(() => {
             {{ operationMessage }}
           </p>
 
+          <RightSidebarDock v-model:active-tab="activeDockTab" :can-open-settings="isMaster" @open-settings="closeTabletopOverlays(); isRoomSettingsOpen = true">
+          <template #tokens>
           <section class="token-panel" aria-labelledby="token-panel-heading">
             <div class="panel-heading">
               <div>
@@ -631,15 +649,15 @@ onBeforeUnmount(() => {
                   type="button"
                   class="secondary-button"
                   :disabled="!isRoomReady"
-                  @click="isSheetDrawerOpen = true"
+                  @click="openCharacterSheet"
                 >
                   Abrir ficha
                 </button>
               </div>
             </div>
 
-            <button v-if="isMaster" type="button" class="secondary-button" :disabled="!isRoomReady" @click="openSheetCreator">+ Criar ficha de personagem</button>
-            <button type="button" class="secondary-button" :disabled="!isRoomReady || !selectedToken" @click="openLibraryImport">Importar Ficha da Minha Biblioteca</button>
+            <button v-if="isMaster" type="button" class="secondary-button" :disabled="!isRoomReady" @click="closeTabletopOverlays(); openSheetCreator()">+ Criar ficha de personagem</button>
+            <button type="button" class="secondary-button" :disabled="!isRoomReady || !selectedToken" @click="closeTabletopOverlays(); openLibraryImport()">Importar Ficha da Minha Biblioteca</button>
             <form v-if="isMaster" class="token-controls" @submit.prevent="addToken()">
               <label class="visually-hidden" for="new-token-name">Nome do token</label>
               <input
@@ -680,34 +698,36 @@ onBeforeUnmount(() => {
             </ul>
             <p v-else class="empty-tokens">Ainda não há tokens nesta cena.</p>
           </section>
-        </div>
+          </template>
 
-        <aside class="room-sidebar">
-          <section class="sidebar-card">
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Ao vivo</p>
-                <h2>Participantes</h2>
-              </div>
-              <span class="participant-count">{{ participants.length }}</span>
-            </div>
-            <ul class="participant-list">
-              <li v-for="participant in participants" :key="participant.id">
-                <span class="presence-indicator" :class="{ online: onlineUserIds.includes(participant.usuarioId) }" />
-                <span class="participant-name">{{ participantLabel(participant) }}</span>
-                <span class="participant-role">{{ participant.papel === 'MESTRE' ? 'Mestre' : 'Jogador' }}</span>
-              </li>
-            </ul>
-            <p class="presence-note">
-              {{ onlineUserIds.length }} {{ onlineUserIds.length === 1 ? 'conectado' : 'conectados' }}
-            </p>
-          </section>
+          <template #sheets>
+            <section class="sidebar-card">
+              <p class="eyebrow">Fichas de personagem</p>
+              <h2>Fichas</h2>
+              <p class="player-notice">Selecione um token com ficha vinculada para abrir seus atributos.</p>
+              <button
+                v-if="selectedToken?.characterSheetId"
+                type="button"
+                class="secondary-button"
+                :disabled="!isRoomReady"
+                @click="openCharacterSheet"
+              >
+                Abrir ficha selecionada
+              </button>
+              <p v-else class="empty-tokens">Nenhuma ficha vinculada ao token selecionado.</p>
+            </section>
+          </template>
+
+          <template #assets>
           <section class="sidebar-card scene-details">
             <p class="eyebrow">Configuração do mapa</p>
             <p>Grid <strong>{{ gridConfig.enabled ? 'ligado' : 'desligado' }}</strong></p>
             <p>Tamanho <strong>{{ gridConfig.size }} px</strong></p>
             <p>Escala e posição da câmera são locais nesta sessão.</p>
           </section>
+          </template>
+
+          <template #chat>
           <section class="sidebar-card chat-card" aria-labelledby="chat-heading">
             <div class="panel-heading">
               <div>
@@ -772,7 +792,14 @@ onBeforeUnmount(() => {
             </form>
             <p class="chat-hint">Use `d20`, `2d4+2`, `3#5d20`, `d6!`, `4d6ns`, `2d6++1`, `2d6--1`, `5d6>>4` ou `5d6<<3`.</p>
           </section>
-        </aside>
+          </template>
+          </RightSidebarDock>
+        </div>
+          <UserPresenceBar
+            :participants="participants"
+            :online-user-ids="onlineUserIds"
+            :current-user-id="authStore.user?.id"
+          />
       </section>
       <div v-if="isSheetCreatorOpen" class="sheet-creator-backdrop" role="presentation" @click.self="isSheetCreatorOpen = false">
         <section class="sheet-creator" role="dialog" aria-modal="true" aria-labelledby="sheet-creator-title">
@@ -808,8 +835,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .tabletop-page {
-  width: min(100%, 1500px);
-  margin: 0 auto;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: #f4efdf;
+  background: #27362e;
 }
 .tabletop-header,
 .title-group,
@@ -824,7 +858,19 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 .tabletop-header {
-  margin-bottom: 1.25rem;
+  position: fixed;
+  z-index: 40;
+  top: 4rem;
+  right: 0;
+  left: 0;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  color: #f4efdf;
+  background: linear-gradient(180deg, rgb(18 27 23 / 92%), transparent);
+  pointer-events: none;
+}
+.tabletop-header > * {
+  pointer-events: auto;
 }
 .title-group {
   justify-content: flex-start;
@@ -901,14 +947,16 @@ h1 {
   box-shadow: 0 0 0 3px rgb(57 148 90 / 15%);
 }
 .tabletop-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  align-items: start;
-  gap: 1rem;
+  position: absolute;
+  inset: 0;
 }
 .scene-column,
 .room-sidebar {
   min-width: 0;
+}
+.scene-column {
+  position: absolute;
+  inset: 0;
 }
 .scene-toolbar,
 .token-panel,
@@ -1017,7 +1065,16 @@ h1 {
   line-height: 1.45;
 }
 .scene-toolbar {
-  margin-bottom: 0.7rem;
+  position: absolute;
+  z-index: 10;
+  top: 9.25rem;
+  left: 1.25rem;
+  max-width: min(34rem, calc(100vw - 2rem));
+  margin: 0;
+  color: #f4efdf;
+  background: rgb(18 27 23 / 78%);
+  border-color: rgb(255 255 255 / 14%);
+  backdrop-filter: blur(10px);
 }
 .scene-toolbar h2,
 .panel-heading h2 {
@@ -1037,10 +1094,11 @@ h1 {
 .scene-frame {
   position: relative;
   overflow: hidden;
-  min-height: 360px;
-  height: clamp(360px, 64vh, 780px);
-  border: 1px solid #35483c;
-  border-radius: 0.75rem;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  border: 0;
+  border-radius: 0;
   background: #27362e;
   box-shadow: 0 1rem 2.5rem rgb(25 35 28 / 18%);
 }
@@ -1207,11 +1265,8 @@ h1 {
   border: 0;
 }
 @media (max-width: 960px) {
-  .tabletop-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .room-sidebar {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 620px) {
@@ -1235,5 +1290,5 @@ h1 {
 </style>
 
 <style scoped>
-.sheet-creator-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;background:#18251dcc}.sheet-creator{display:grid;gap:.7rem;width:min(100%, 30rem);max-width:30rem;padding:1.3rem;border-radius:.7rem;background:var(--color-background);box-shadow:0 1.5rem 4rem #0005}.sheet-creator h2{margin:0 0 .4rem}.library-sheet-option{display:flex;justify-content:space-between;align-items:center;text-align:left}.library-sheet-option span{font-size:.75rem;opacity:.7}.sheet-creator input,.sheet-creator select{min-height:2.4rem;padding:.45rem}.sheet-creator-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:.5rem}.sheet-creator .secondary-button{color:inherit;background:transparent;border-color:var(--color-border)}
+.sheet-creator-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:1rem;background:#18251dcc}.sheet-creator{display:grid;gap:.7rem;width:min(100%, 30rem);max-width:30rem;padding:1.3rem;border-radius:.7rem;background:var(--color-background);box-shadow:0 1.5rem 4rem #0005}.sheet-creator h2{margin:0 0 .4rem}.library-sheet-option{display:flex;justify-content:space-between;align-items:center;text-align:left}.library-sheet-option span{font-size:.75rem;opacity:.7}.sheet-creator input,.sheet-creator select{min-height:2.4rem;padding:.45rem}.sheet-creator-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:.5rem}.sheet-creator .secondary-button{color:inherit;background:transparent;border-color:var(--color-border)}
 </style>
