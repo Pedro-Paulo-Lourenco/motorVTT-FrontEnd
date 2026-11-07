@@ -7,6 +7,7 @@ import CadView from "@/views/CadView.vue";
 import RoomView from "@/views/RoomView.vue";
 import SheetTemplateBuilderView from "@/views/SheetTemplateBuilderView.vue";
 import TemplateListView from "@/views/TemplateListView.vue";
+import UserLibraryView from "@/views/UserLibraryView.vue";
 
 
 const routes = [
@@ -29,6 +30,7 @@ const routes = [
         meta: {requiresAuth: true}
     },
     { path: '/templates', name: 'TemplateList', component: TemplateListView, meta: { requiresAuth: true } },
+    { path: '/biblioteca', name: 'UserLibrary', component: UserLibraryView, meta: { requiresAuth: true } },
     { path: '/templates/novo', name: 'TemplateCreate', component: SheetTemplateBuilderView, meta: { requiresAuth: true } },
     { path: '/templates/:id/editar', name: 'TemplateEdit', component: SheetTemplateBuilderView, meta: { requiresAuth: true } },
     { path: '/templates/fichas/novo', redirect: { name: 'TemplateCreate' } },

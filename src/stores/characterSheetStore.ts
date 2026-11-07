@@ -1,11 +1,11 @@
 import { computed, onScopeDispose, ref, shallowRef } from 'vue';
 import { defineStore } from 'pinia';
 import { z } from 'zod';
-import { characterSheetSchema, sheetTemplateSchema, type SheetField, type SheetTemplate } from '@motor-vtt/contracts';
+import { characterSheetSchema, evaluateFormulaFields, sheetTemplateSchema, type SheetField, type SheetTemplate } from '@motor-vtt/contracts';
 import type { Socket } from 'socket.io-client';
 import api from '@/services/api';
 
-type SheetValue = string | number | { atual: number; maximo: number } | null;
+type SheetValue = string | number | boolean | { atual: number; maximo: number } | null;
 type SheetValues = Record<string, SheetValue>;
 type SheetSocket = Socket;
 
@@ -18,7 +18,7 @@ const updatedPayloadSchema = z.object({
 const socketErrorSchema = z.object({ code: z.string(), message: z.string() });
 
 function normalizeValue(value: unknown): SheetValue {
-  if (typeof value === 'string' || typeof value === 'number' || value === null) return value;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) return value;
   if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
     const record = value as Record<string, unknown>;
     if (typeof record.atual === 'number' && typeof record.maximo === 'number') {
@@ -30,23 +30,6 @@ function normalizeValue(value: unknown): SheetValue {
 
 function normalizeValues(value: Record<string, unknown>): SheetValues {
   return Object.fromEntries(Object.entries(value).map(([id, fieldValue]) => [id, normalizeValue(fieldValue)]));
-}
-
-function numericValue(value: SheetValue | undefined): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'object' && value !== null) return value.atual;
-  return 0;
-}
-
-function evaluateFormula(formula: string, values: SheetValues): number {
-  const expression = formula.replace(/@([A-Za-z_][A-Za-z0-9_]*)/g, (_, id: string) => String(numericValue(values[id])));
-  if (!/^[\d\s.+\-*/(),A-Za-z_]+$/.test(expression)) return 0;
-  const functions = { floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max };
-  try {
-    return Function('floor', 'ceil', 'min', 'max', `"use strict"; return (${expression});`)(functions.floor, functions.ceil, functions.min, functions.max) as number;
-  } catch {
-    return 0;
-  }
 }
 
 export const useCharacterSheetStore = defineStore('characterSheet', () => {
@@ -165,7 +148,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   function updateResource(fieldId: string, value: { atual: number; maximo: number }): void {
     values.value = { ...values.value, [fieldId]: value };
     if (!socket.value || !sheetId.value || !roomId.value) {
-      error.value = 'A ficha não está conectada à sala.';
+      schedulePersist();
       return;
     }
     socket.value.emit('sheet:update-resource', {
@@ -177,7 +160,15 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   function fieldValue(field: SheetField): SheetValue {
-    if (field.formula) return evaluateFormula(field.formula, values.value);
+    if (field.formula) {
+      try {
+        const calculated = evaluateFormulaFields(fields.value, values.value);
+        const value = calculated[field.id];
+        return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+      } catch {
+        return 0;
+      }
+    }
     return values.value[field.id] ?? null;
   }
 

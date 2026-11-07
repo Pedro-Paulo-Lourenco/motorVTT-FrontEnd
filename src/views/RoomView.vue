@@ -61,6 +61,10 @@ const selectedTokenId = ref<string | null>(null);
 const isSheetDrawerOpen = ref(false);
 const isRoomSettingsOpen = ref(false);
 const isSheetCreatorOpen = ref(false);
+const isLibraryImportOpen = ref(false);
+const librarySheets = ref<Array<{ id: string; nome: string }>>([]);
+const libraryImportError = ref('');
+const isImportingSheet = ref(false);
 const sheetTemplates = ref<SheetTemplate[]>([]);
 const sheetTemplateId = ref('');
 const sheetName = ref('');
@@ -364,6 +368,31 @@ function emitOperation(eventName: string, payload: unknown): Promise<boolean> {
   });
 }
 
+async function openLibraryImport(): Promise<void> {
+  if (!isRoomReady.value || !selectedToken.value) {
+    operationMessage.value = 'Selecione seu token antes de importar uma ficha.';
+    return;
+  }
+  libraryImportError.value = '';
+  try {
+    const response = await api.get<{ data: { sheets: Array<{ id: string; nome: string }> } }>('/user/library');
+    librarySheets.value = response.data.data.sheets;
+    isLibraryImportOpen.value = true;
+  } catch { libraryImportError.value = 'Não foi possível carregar sua biblioteca.'; }
+}
+
+async function importLibrarySheet(sheetId: string): Promise<void> {
+  if (!room.value || !selectedToken.value || isImportingSheet.value) return;
+  isImportingSheet.value = true; libraryImportError.value = '';
+  try {
+    await api.post(`/rooms/${encodeURIComponent(room.value.id)}/character-sheets/${encodeURIComponent(sheetId)}/import`);
+    await api.put(`/rooms/${encodeURIComponent(room.value.id)}/tokens/${encodeURIComponent(selectedToken.value.id)}/sheet`, { sheetId });
+    tokens.value = tokens.value.map((token) => token.id === selectedToken.value?.id ? { ...token, characterSheetId: sheetId } : token);
+    isLibraryImportOpen.value = false;
+  } catch { libraryImportError.value = 'Não foi possível importar e vincular esta ficha.'; }
+  finally { isImportingSheet.value = false; }
+}
+
 async function openSheetCreator(): Promise<void> {
   sheetCreationError.value = '';
   sheetName.value = selectedToken.value?.nome ? `Ficha de ${selectedToken.value.nome}` : '';
@@ -610,6 +639,7 @@ onBeforeUnmount(() => {
             </div>
 
             <button v-if="isMaster" type="button" class="secondary-button" :disabled="!isRoomReady" @click="openSheetCreator">+ Criar ficha de personagem</button>
+            <button type="button" class="secondary-button" :disabled="!isRoomReady || !selectedToken" @click="openLibraryImport">Importar Ficha da Minha Biblioteca</button>
             <form v-if="isMaster" class="token-controls" @submit.prevent="addToken()">
               <label class="visually-hidden" for="new-token-name">Nome do token</label>
               <input
@@ -752,6 +782,16 @@ onBeforeUnmount(() => {
           <label v-if="selectedToken" for="sheet-target">Vincular a</label><select v-if="selectedToken" id="sheet-target" v-model="sheetTarget"><option value="selected">Token selecionado ({{ selectedToken.nome }})</option><option value="new">Novo token</option></select>
           <p v-if="sheetCreationError" class="error-message" role="alert">{{ sheetCreationError }}</p>
           <div class="sheet-creator-actions"><button type="button" class="secondary-button" @click="isSheetCreatorOpen = false">Cancelar</button><button type="button" :disabled="isCreatingSheet || !sheetTemplateId || !sheetName.trim()" @click="createAndLinkSheet">{{ isCreatingSheet ? 'Criando...' : 'Criar e vincular' }}</button></div>
+        </section>
+      </div>
+      <div v-if="isLibraryImportOpen" class="sheet-creator-backdrop" role="presentation" @click.self="isLibraryImportOpen = false">
+        <section class="sheet-creator" role="dialog" aria-modal="true" aria-labelledby="library-import-title">
+          <h2 id="library-import-title">Importar ficha da minha biblioteca</h2>
+          <p>Escolha uma ficha para vincular ao token selecionado.</p>
+          <button v-for="sheet in librarySheets" :key="sheet.id" type="button" class="library-sheet-option" :disabled="isImportingSheet" @click="importLibrarySheet(sheet.id)">{{ sheet.nome }}<span>Importar</span></button>
+          <p v-if="librarySheets.length === 0" class="empty-tokens">Você ainda não possui fichas pessoais.</p>
+          <p v-if="libraryImportError" class="error-message" role="alert">{{ libraryImportError }}</p>
+          <button type="button" class="secondary-button" @click="isLibraryImportOpen = false">Cancelar</button>
         </section>
       </div>
       <CharacterSheetDrawer
@@ -1195,5 +1235,5 @@ h1 {
 </style>
 
 <style scoped>
-.sheet-creator-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;background:#18251dcc}.sheet-creator{display:grid;gap:.7rem;width:min(100%, 30rem);max-width:30rem;padding:1.3rem;border-radius:.7rem;background:var(--color-background);box-shadow:0 1.5rem 4rem #0005}.sheet-creator h2{margin:0 0 .4rem}.sheet-creator input,.sheet-creator select{min-height:2.4rem;padding:.45rem}.sheet-creator-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:.5rem}.sheet-creator .secondary-button{color:inherit;background:transparent;border-color:var(--color-border)}
+.sheet-creator-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;background:#18251dcc}.sheet-creator{display:grid;gap:.7rem;width:min(100%, 30rem);max-width:30rem;padding:1.3rem;border-radius:.7rem;background:var(--color-background);box-shadow:0 1.5rem 4rem #0005}.sheet-creator h2{margin:0 0 .4rem}.library-sheet-option{display:flex;justify-content:space-between;align-items:center;text-align:left}.library-sheet-option span{font-size:.75rem;opacity:.7}.sheet-creator input,.sheet-creator select{min-height:2.4rem;padding:.45rem}.sheet-creator-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:.5rem}.sheet-creator .secondary-button{color:inherit;background:transparent;border-color:var(--color-border)}
 </style>

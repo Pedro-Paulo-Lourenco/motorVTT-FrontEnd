@@ -1,37 +1,25 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { onBeforeUnmount, watch } from 'vue';
 import type { Socket } from 'socket.io-client';
 import { useCharacterSheetStore } from '@/stores/characterSheetStore';
-import AttributeInput from './AttributeInput.vue';
-import ResourceBarInput from './ResourceBarInput.vue';
-import FormulaDisplay from './FormulaDisplay.vue';
+import SheetRenderer from './SheetRenderer.vue';
+import type { SheetField } from '@motor-vtt/contracts';
 
-const props = defineProps<{ open: boolean; sheetId: string | null; roomId: string; socket: Socket | null }>();
+const props = defineProps<{ open: boolean; sheetId: string | null; roomId?: string; socket?: Socket | null }>();
 const emit = defineEmits<{ close: [] }>();
 const store = useCharacterSheetStore();
-const activeSection = ref<'cabecalho' | 'atributos' | 'recursos' | 'pericias'>('cabecalho');
-const sectionLabels = { cabecalho: 'Cabeçalho', atributos: 'Atributos', recursos: 'Recursos', pericias: 'Perícias' } as const;
-const sections = computed(() => Object.keys(sectionLabels) as Array<keyof typeof sectionLabels>);
-const fields = computed(() => store.template?.camposSchema[activeSection.value] ?? []);
-
 watch(() => [props.open, props.sheetId, props.socket, props.roomId] as const, ([open, sheetId, socket, roomId]) => {
-  if (open && sheetId && socket) void store.fetchSheet(sheetId, roomId, socket);
+  if (open && sheetId) void store.fetchSheet(sheetId, roomId ?? '', socket ?? undefined);
   if (!open) store.reset();
 }, { immediate: true });
 onBeforeUnmount(() => store.reset());
 
-function valueFor(id: string): string | number {
-  const value = store.values[id];
-  return typeof value === 'string' || typeof value === 'number' ? value : '';
-}
-function resourceFor(id: string): { atual: number; maximo: number } {
-  const value = store.values[id];
-  return typeof value === 'object' && value !== null ? value : { atual: 0, maximo: 0 };
-}
-function isFormula(field: { formula?: string | null }): boolean { return Boolean(field.formula); }
-function updateHeader(field: { id: string; type: string }, event: Event): void {
-  const rawValue = (event.target as HTMLInputElement).value;
-  store.updateFieldValue(field.id, field.type === 'NUMBER' ? Number(rawValue) : rawValue);
+function updateValue(field: SheetField, value: unknown): void {
+  if (field.type === 'RESOURCE' && typeof value === 'object' && value !== null) {
+    store.updateResource(field.id, value as { atual: number; maximo: number });
+    return;
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) store.updateFieldValue(field.id, value);
 }
 </script>
 
@@ -46,18 +34,7 @@ function updateHeader(field: { id: string; type: string }, event: Event): void {
       <div v-if="store.isLoading" class="drawer-state">Carregando ficha...</div>
       <div v-else-if="store.error" class="drawer-state error" role="alert">{{ store.error }}</div>
       <template v-else-if="store.template">
-        <nav class="sheet-tabs" aria-label="Seções da ficha">
-          <button v-for="section in sections" :key="section" type="button" :class="{ active: activeSection === section }" :aria-selected="activeSection === section" @click="activeSection = section">{{ sectionLabels[section] }}</button>
-        </nav>
-        <section class="drawer-content" :aria-label="sectionLabels[activeSection]">
-          <p v-if="fields.length === 0" class="empty-section">Nenhum campo nesta seção.</p>
-          <template v-for="field in fields" :key="field.id">
-            <FormulaDisplay v-if="isFormula(field)" :label="field.label" :formula="field.formula" :value="Number(store.fieldValue(field) ?? 0)" />
-            <ResourceBarInput v-else-if="activeSection === 'recursos'" :label="field.label" :model-value="resourceFor(field.id)" @update:model-value="store.updateResource(field.id, $event)" />
-            <AttributeInput v-else-if="activeSection === 'atributos'" :label="field.label" :model-value="Number(valueFor(field.id) || 0)" @update:model-value="store.updateAttribute(field.id, $event)" />
-            <label v-else class="sheet-field"><span>{{ field.label }}</span><input :type="field.type === 'NUMBER' ? 'number' : 'text'" :value="valueFor(field.id)" @input="updateHeader(field, $event)"></label>
-          </template>
-        </section>
+<div class="drawer-content"><SheetRenderer :schema="store.template.camposSchema" :values="store.values" mode="play" @update:value="updateValue" /></div>
       </template>
     </aside>
   </Transition>

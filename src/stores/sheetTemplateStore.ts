@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { SheetFieldType } from '@motor-vtt/contracts';
+import { detectCircularDependencies, SheetFieldType, validateFormula as parseFormula } from '@motor-vtt/contracts';
 
 export type SheetSection = 'cabecalho' | 'atributos' | 'recursos' | 'pericias';
 export type BuilderFieldType = SheetFieldType;
@@ -31,6 +31,32 @@ function emptySchema(): Record<SheetSection, BuilderField[]> {
   return { cabecalho: [], atributos: [], recursos: [], pericias: [] };
 }
 
+export const defaultTemplatePreset: Record<SheetSection, BuilderField[]> = {
+  cabecalho: [],
+  atributos: [
+    { id: 'forca', label: 'Força', type: SheetFieldType.NUMBER, formula: null, required: true, attributeId: null },
+    { id: 'destreza', label: 'Destreza', type: SheetFieldType.NUMBER, formula: null, required: true, attributeId: null },
+    { id: 'constituicao', label: 'Constituição', type: SheetFieldType.NUMBER, formula: null, required: true, attributeId: null },
+    { id: 'inteligencia', label: 'Inteligência', type: SheetFieldType.NUMBER, formula: null, required: true, attributeId: null },
+    { id: 'sabedoria', label: 'Sabedoria', type: SheetFieldType.NUMBER, formula: null, required: true, attributeId: null },
+    { id: 'carisma', label: 'Carisma', type: SheetFieldType.NUMBER, formula: null, required: true, attributeId: null },
+  ],
+  recursos: [
+    { id: 'vida', label: 'Vida', type: SheetFieldType.RESOURCE, formula: null, required: true, attributeId: null },
+    { id: 'mana', label: 'Mana', type: SheetFieldType.RESOURCE, formula: null, required: true, attributeId: null },
+  ],
+  pericias: [
+    { id: 'atletismo', label: 'Atletismo', type: SheetFieldType.FORMULA, formula: '@forca + 2', required: false, attributeId: 'forca' },
+    { id: 'furtividade', label: 'Furtividade', type: SheetFieldType.FORMULA, formula: '@destreza + 2', required: false, attributeId: 'destreza' },
+    { id: 'resistencia', label: 'Resistência', type: SheetFieldType.FORMULA, formula: 'floor((@forca + @constituicao) / 2)', required: false, attributeId: 'constituicao' },
+    { id: 'percepcao', label: 'Percepção', type: SheetFieldType.FORMULA, formula: 'max(@sabedoria, @inteligencia) + 1', required: false, attributeId: 'sabedoria' },
+  ],
+};
+
+function cloneSchema(schema: Record<SheetSection, BuilderField[]>): Record<SheetSection, BuilderField[]> {
+  return Object.fromEntries(Object.entries(schema).map(([section, fields]) => [section, fields.map((field) => ({ ...field }))])) as Record<SheetSection, BuilderField[]>;
+}
+
 export function newField(): BuilderField {
   return { id: '', label: '', type: SheetFieldType.TEXT, formula: null, required: false, attributeId: null };
 }
@@ -38,34 +64,8 @@ export function newField(): BuilderField {
 export function validateFormula(formula: string): string | null {
   const value = formula.trim();
   if (!value) return null;
-  let depth = 0;
-  let previous: 'value' | 'operator' | 'open' | 'close' | 'comma' | null = null;
-  const tokenPattern = /\s+|@([A-Za-z_][A-Za-z0-9_]*)|([A-Za-z_][A-Za-z0-9_]*)|(\d+(?:\.\d+)?)|([+\-*/])|(\()|(\))|(,)/g;
-  let cursor = 0;
-  let match: RegExpExecArray | null;
-  while ((match = tokenPattern.exec(value))) {
-    if (match.index !== cursor) return 'A fórmula contém um caractere inválido.';
-    cursor = tokenPattern.lastIndex;
-    if (match[1] || match[2] || match[3]) {
-      const identifier = match[1] || match[2];
-      if (identifier && !match[1] && !['floor', 'ceil', 'min', 'max'].includes(identifier)) return `Identificador inválido: ${identifier}.`;
-      previous = 'value';
-    } else if (match[4]) {
-      if (previous === 'value' || previous === 'close') return 'Operador em posição inválida.';
-      previous = 'operator';
-    } else if (match[5]) {
-      depth += 1;
-      previous = 'open';
-    } else if (match[6]) {
-      if (depth-- <= 0 || previous === 'operator' || previous === 'open' || previous === 'comma') return 'Parênteses inválidos.';
-      previous = 'close';
-    } else if (match[7]) {
-      if (previous !== 'value' && previous !== 'close') return 'Vírgula em posição inválida.';
-      previous = 'comma';
-    }
-  }
-  if (cursor !== value.length || depth !== 0 || previous === 'operator' || previous === 'open' || previous === 'comma') return 'Fórmula incompleta ou com parênteses inválidos.';
-  return null;
+  const result = parseFormula(value);
+  return result.valid ? null : result.error?.message ?? 'Fórmula inválida.';
 }
 
 export const useSheetTemplateStore = defineStore('sheetTemplate', () => {
@@ -77,7 +77,18 @@ export const useSheetTemplateStore = defineStore('sheetTemplate', () => {
   function addField(section: SheetSection, field = newField()): void { camposSchema.value[section].push(field); }
   function updateField(section: SheetSection, index: number, field: BuilderField): void { camposSchema.value[section][index] = field; }
   function removeField(section: SheetSection, index: number): void { camposSchema.value[section].splice(index, 1); }
-  function reset(): void { nome.value = ''; sistema.value = ''; camposSchema.value = emptySchema(); }
+  function moveField(section: SheetSection, index: number, direction: -1 | 1): void {
+    const nextIndex = index + direction;
+    const fields = camposSchema.value[section];
+    if (nextIndex < 0 || nextIndex >= fields.length) return;
+    const [field] = fields.splice(index, 1);
+    if (field) fields.splice(nextIndex, 0, field);
+  }
+  function reset(preset: Record<SheetSection, BuilderField[]> | null = null): void {
+    nome.value = '';
+    sistema.value = '';
+    camposSchema.value = cloneSchema(preset ?? emptySchema());
+  }
   function validate(): string | null {
     if (!nome.value.trim()) return 'Informe o nome do template.';
     const ids = new Set<string>();
@@ -87,9 +98,15 @@ export const useSheetTemplateStore = defineStore('sheetTemplate', () => {
       if (ids.has(field.id.trim())) return `O ID de variável "${field.id}" está duplicado.`;
       ids.add(field.id.trim());
       if (field.type === SheetFieldType.FORMULA && !field.formula?.trim()) return `Informe a fórmula de "${field.label}".`;
-      if (field.formula) { const formulaError = validateFormula(field.formula); if (formulaError) return `Fórmula de "${field.label}": ${formulaError}`; }
     }
+    for (const field of Object.values(camposSchema.value).flat()) {
+      if (!field.formula) continue;
+      const formulaError = parseFormula(field.formula, ids);
+      if (!formulaError.valid) return `Fórmula de "${field.label}": ${formulaError.error?.message ?? 'expressão inválida.'}`;
+    }
+    const allFields = Object.values(camposSchema.value).flat();
+    if (detectCircularDependencies(allFields)) return 'As fórmulas possuem uma dependência circular.';
     return null;
   }
-  return { nome, sistema, camposSchema, isSaving, totalFields, addField, updateField, removeField, reset, validate };
+  return { nome, sistema, camposSchema, isSaving, totalFields, addField, updateField, removeField, moveField, reset, validate };
 });
