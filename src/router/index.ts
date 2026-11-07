@@ -6,6 +6,7 @@ import LoginView from "@/views/LoginView.vue";
 import CadView from "@/views/CadView.vue";
 import RoomView from "@/views/RoomView.vue";
 import SheetTemplateBuilderView from "@/views/SheetTemplateBuilderView.vue";
+import TemplateListView from "@/views/TemplateListView.vue";
 
 
 const routes = [
@@ -27,12 +28,10 @@ const routes = [
         component: RoomView,
         meta: {requiresAuth: true}
     },
-    {
-        path: '/templates/fichas/novo',
-        name: 'SheetTemplateBuilder',
-        component: SheetTemplateBuilderView,
-        meta: {requiresAuth: true}
-    },
+    { path: '/templates', name: 'TemplateList', component: TemplateListView, meta: { requiresAuth: true } },
+    { path: '/templates/novo', name: 'TemplateCreate', component: SheetTemplateBuilderView, meta: { requiresAuth: true } },
+    { path: '/templates/:id/editar', name: 'TemplateEdit', component: SheetTemplateBuilderView, meta: { requiresAuth: true } },
+    { path: '/templates/fichas/novo', redirect: { name: 'TemplateCreate' } },
     {
         path: '/login',
         name: 'Login',

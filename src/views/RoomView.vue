@@ -14,9 +14,11 @@ import {
   sceneSchema,
   type Participant,
   type Room,
+  type SheetTemplate,
 } from '@motor-vtt/contracts';
 import api from '@/services/api.ts';
 import CharacterSheetDrawer from '@/components/sheet/CharacterSheetDrawer.vue';
+import RoomSettings from '@/components/RoomSettings.vue';
 import { useAuthStore } from '@/stores/auth.ts';
 import { resolveTabletopSocketOrigin } from '@/tabletop/connection';
 import {
@@ -57,6 +59,14 @@ const isSendingMessage = ref(false);
 const onlineUserIds = ref<string[]>([]);
 const selectedTokenId = ref<string | null>(null);
 const isSheetDrawerOpen = ref(false);
+const isRoomSettingsOpen = ref(false);
+const isSheetCreatorOpen = ref(false);
+const sheetTemplates = ref<SheetTemplate[]>([]);
+const sheetTemplateId = ref('');
+const sheetName = ref('');
+const sheetTarget = ref<'selected' | 'new'>('selected');
+const isCreatingSheet = ref(false);
+const sheetCreationError = ref('');
 const tokenName = ref('');
 const isLoading = ref(true);
 const isConnected = ref(false);
@@ -354,7 +364,46 @@ function emitOperation(eventName: string, payload: unknown): Promise<boolean> {
   });
 }
 
-async function addToken(): Promise<void> {
+async function openSheetCreator(): Promise<void> {
+  sheetCreationError.value = '';
+  sheetName.value = selectedToken.value?.nome ? `Ficha de ${selectedToken.value.nome}` : '';
+  sheetTarget.value = selectedToken.value ? 'selected' : 'new';
+  try {
+    sheetTemplates.value = (await api.get<{ data: SheetTemplate[] }>('/rooms/' + encodeURIComponent(room.value?.id ?? '') + '/templates')).data.data;
+    if (!sheetTemplateId.value) sheetTemplateId.value = sheetTemplates.value[0]?.id ?? '';
+    isSheetCreatorOpen.value = true;
+  } catch {
+    sheetCreationError.value = 'Não foi possível carregar os templates da sala.';
+  }
+}
+
+async function createAndLinkSheet(): Promise<void> {
+  if (!room.value || !sheetTemplateId.value || !sheetName.value.trim() || isCreatingSheet.value) return;
+  isCreatingSheet.value = true;
+  sheetCreationError.value = '';
+  try {
+    const response = await api.post<{ data: { id: string; salaId?: string | null } }>('/character-sheets', {
+      templateId: sheetTemplateId.value,
+      nome: sheetName.value.trim(),
+      salaId: room.value.id,
+    });
+    const sheetId = response.data.data.id;
+    if (sheetTarget.value === 'selected' && selectedToken.value) {
+      await api.put(`/rooms/${encodeURIComponent(room.value.id)}/tokens/${encodeURIComponent(selectedToken.value.id)}/sheet`, { sheetId });
+      tokens.value = tokens.value.map((token) => token.id === selectedToken.value?.id ? { ...token, characterSheetId: sheetId } : token);
+    } else {
+      tokenName.value = sheetName.value.trim();
+      await addToken(sheetId);
+    }
+    isSheetCreatorOpen.value = false;
+  } catch {
+    sheetCreationError.value = 'Não foi possível criar ou vincular a ficha.';
+  } finally {
+    isCreatingSheet.value = false;
+  }
+}
+
+async function addToken(characterSheetId?: string): Promise<void> {
   if (!canEdit.value || !scene.value || !tokenName.value.trim()) return;
   const name = tokenName.value.trim().slice(0, 120);
   const token = tokenCreatePayloadSchema.safeParse({
@@ -362,6 +411,7 @@ async function addToken(): Promise<void> {
     x: 704 + (tokens.value.length % 5) * gridConfig.value.size,
     y: 640 + Math.floor(tokens.value.length / 5) * gridConfig.value.size,
     escala: 1,
+    ...(characterSheetId ? { characterSheetId } : {}),
   });
   if (!token.success) {
     operationMessage.value = 'Os dados do token não são válidos.';
@@ -486,6 +536,9 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="session-badges">
+        <button v-if="isMaster" type="button" class="secondary-button" @click="isRoomSettingsOpen = true">
+          Configurações
+        </button>
         <span v-if="currentParticipant" class="role-badge">
           {{ isMaster ? 'Mestre' : 'Jogador' }}
         </span>
@@ -556,7 +609,8 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <form v-if="isMaster" class="token-controls" @submit.prevent="addToken">
+            <button v-if="isMaster" type="button" class="secondary-button" :disabled="!isRoomReady" @click="openSheetCreator">+ Criar ficha de personagem</button>
+            <form v-if="isMaster" class="token-controls" @submit.prevent="addToken()">
               <label class="visually-hidden" for="new-token-name">Nome do token</label>
               <input
                 id="new-token-name"
@@ -690,6 +744,16 @@ onBeforeUnmount(() => {
           </section>
         </aside>
       </section>
+      <div v-if="isSheetCreatorOpen" class="sheet-creator-backdrop" role="presentation" @click.self="isSheetCreatorOpen = false">
+        <section class="sheet-creator" role="dialog" aria-modal="true" aria-labelledby="sheet-creator-title">
+          <h2 id="sheet-creator-title">Criar ficha de personagem</h2>
+          <label for="sheet-name">Nome da ficha</label><input id="sheet-name" v-model="sheetName" type="text" maxlength="160">
+          <label for="sheet-template">Template</label><select id="sheet-template" v-model="sheetTemplateId"><option v-for="template in sheetTemplates" :key="template.id" :value="template.id">{{ template.nome }}</option></select>
+          <label v-if="selectedToken" for="sheet-target">Vincular a</label><select v-if="selectedToken" id="sheet-target" v-model="sheetTarget"><option value="selected">Token selecionado ({{ selectedToken.nome }})</option><option value="new">Novo token</option></select>
+          <p v-if="sheetCreationError" class="error-message" role="alert">{{ sheetCreationError }}</p>
+          <div class="sheet-creator-actions"><button type="button" class="secondary-button" @click="isSheetCreatorOpen = false">Cancelar</button><button type="button" :disabled="isCreatingSheet || !sheetTemplateId || !sheetName.trim()" @click="createAndLinkSheet">{{ isCreatingSheet ? 'Criando...' : 'Criar e vincular' }}</button></div>
+        </section>
+      </div>
       <CharacterSheetDrawer
         :open="isSheetDrawerOpen"
         :sheet-id="selectedToken?.characterSheetId ?? null"
@@ -698,6 +762,7 @@ onBeforeUnmount(() => {
         @close="isSheetDrawerOpen = false"
       />
     </template>
+    <RoomSettings v-if="isRoomSettingsOpen && room && isMaster" :room-id="room.id" @close="isRoomSettingsOpen = false" />
   </main>
 </template>
 
@@ -1127,4 +1192,8 @@ h1 {
     height: 55vh;
   }
 }
+</style>
+
+<style scoped>
+.sheet-creator-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;background:#18251dcc}.sheet-creator{display:grid;gap:.7rem;width:min(100%, 30rem);max-width:30rem;padding:1.3rem;border-radius:.7rem;background:var(--color-background);box-shadow:0 1.5rem 4rem #0005}.sheet-creator h2{margin:0 0 .4rem}.sheet-creator input,.sheet-creator select{min-height:2.4rem;padding:.45rem}.sheet-creator-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:.5rem}.sheet-creator .secondary-button{color:inherit;background:transparent;border-color:var(--color-border)}
 </style>

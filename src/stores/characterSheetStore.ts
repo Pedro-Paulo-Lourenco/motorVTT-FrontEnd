@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from 'vue';
+import { computed, onScopeDispose, ref, shallowRef } from 'vue';
 import { defineStore } from 'pinia';
 import { z } from 'zod';
 import { characterSheetSchema, sheetTemplateSchema, type SheetField, type SheetTemplate } from '@motor-vtt/contracts';
@@ -59,6 +59,9 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   const isLoading = ref(false);
   const error = ref('');
   const socket = shallowRef<SheetSocket | null>(null);
+  let persistTimer: ReturnType<typeof setTimeout> | undefined;
+  let persistRequest: Promise<void> | undefined;
+  let persistQueued = false;
   const fields = computed<SheetField[]>(() => {
     if (!template.value) return [];
     return Object.values(template.value.camposSchema).flat();
@@ -68,6 +71,38 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   function applyValues(nextValues: Record<string, unknown>, nextVersion?: number): void {
     values.value = normalizeValues(nextValues);
     if (nextVersion !== undefined) version.value = nextVersion;
+  }
+
+  async function persistValues(): Promise<void> {
+    if (!sheetId.value) return;
+    persistQueued = false;
+    const valuesToPersist = { ...values.value };
+    persistRequest = api.put(`/character-sheets/${encodeURIComponent(sheetId.value)}/values`, valuesToPersist)
+      .then((response) => {
+        const parsed = z.object({ success: z.literal(true), data: characterSheetSchema }).safeParse(response.data);
+        if (!parsed.success) throw new Error('Resposta de atualização da ficha inválida.');
+        if (parsed.data.data.id === sheetId.value) {
+          sheet.value = parsed.data.data;
+          applyValues(parsed.data.data.dadosPreenchidos, parsed.data.data.versao);
+        }
+      })
+      .catch(() => {
+        error.value = 'Não foi possível salvar as alterações da ficha.';
+      })
+      .finally(() => {
+        persistRequest = undefined;
+        if (persistQueued) void persistValues();
+      });
+    await persistRequest;
+  }
+
+  function schedulePersist(): void {
+    persistQueued = true;
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      persistTimer = undefined;
+      if (!persistRequest) void persistValues();
+    }, 350);
   }
 
   function onSheetUpdated(payload: unknown): void {
@@ -102,12 +137,12 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
     isLoading.value = true;
     error.value = '';
     try {
-      const sheetResponse = await api.get(`/api/character-sheets/${encodeURIComponent(nextSheetId)}`);
+      const sheetResponse = await api.get(`/character-sheets/${encodeURIComponent(nextSheetId)}`);
       const parsedSheet = z.object({ success: z.literal(true), data: characterSheetSchema }).safeParse(sheetResponse.data);
       if (!parsedSheet.success) throw new Error('Resposta da ficha inválida.');
       sheet.value = parsedSheet.data.data;
       applyValues(parsedSheet.data.data.dadosPreenchidos, parsedSheet.data.data.versao);
-      const templateResponse = await api.get(`/api/sheet-templates/${encodeURIComponent(parsedSheet.data.data.templateId)}`);
+      const templateResponse = await api.get(`/sheet-templates/${encodeURIComponent(parsedSheet.data.data.templateId)}`);
       const parsedTemplate = z.object({ success: z.literal(true), data: sheetTemplateSchema }).safeParse(templateResponse.data);
       if (!parsedTemplate.success) throw new Error('Resposta do template inválida.');
       template.value = parsedTemplate.data.data;
@@ -119,7 +154,12 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   function updateAttribute(fieldId: string, value: number): void {
-    values.value = { ...values.value, [fieldId]: value };
+    updateFieldValue(fieldId, value);
+  }
+
+  function updateFieldValue(fieldId: string, value: SheetValue): void {
+    values.value = { ...values.value, [fieldId]: normalizeValue(value) };
+    schedulePersist();
   }
 
   function updateResource(fieldId: string, value: { atual: number; maximo: number }): void {
@@ -132,7 +172,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
       sheetId: sheetId.value,
       salaId: roomId.value,
       fieldId,
-      newValue: value,
+      newValue: value.atual,
     });
   }
 
@@ -142,6 +182,9 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   function reset(): void {
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = undefined;
+    persistQueued = false;
     disconnectSocket();
     sheetId.value = null;
     roomId.value = null;
@@ -152,5 +195,32 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
     error.value = '';
   }
 
-  return { sheetId, roomId, sheet, template, values, version, fields, formulaFields, isLoading, error, load, connectSocket, updateAttribute, updateResource, fieldValue, reset };
+  onScopeDispose(() => {
+    if (persistTimer) clearTimeout(persistTimer);
+    disconnectSocket();
+  });
+
+  return {
+    sheetId,
+    roomId,
+    sheet,
+    template,
+    values,
+    version,
+    currentSheet: sheet,
+    templateSchema: computed(() => template.value?.camposSchema ?? null),
+    dadosPreenchidos: values,
+    fields,
+    formulaFields,
+    isLoading,
+    error,
+    load,
+    fetchSheet: (nextSheetId: string, nextRoomId = roomId.value ?? '', nextSocket = socket.value ?? undefined) => load(nextSheetId, nextRoomId, nextSocket),
+    connectSocket,
+    updateFieldValue,
+    updateAttribute,
+    updateResource,
+    fieldValue,
+    reset,
+  };
 });

@@ -9,6 +9,7 @@ import {
   type ApiSuccess,
   type Room,
   type Participant,
+  type SheetTemplate,
 } from '@motor-vtt/contracts';
 
 const authStore = useAuthStore();
@@ -26,8 +27,14 @@ const joinError = ref('');
 const joinSuccess = ref('');
 const joinedRoomId = ref('');
 const activeAction = ref<'create' | 'join' | null>(null);
+const templates = ref<SheetTemplate[]>([]);
+const selectedTemplateId = ref('');
 
-type CreateRoomPayload = { nome: string };
+type CreateRoomPayload = { nome: string; templateId?: string };
+
+async function loadTemplates(): Promise<void> {
+  try { templates.value = (await api.get<ApiSuccess<SheetTemplate[]>>('/sheet-templates')).data.data; } catch { templates.value = []; }
+}
 type JoinRoomPayload = { codigoConvite: string };
 
 function getApiError(error: unknown): { status?: number; code?: string } {
@@ -87,7 +94,7 @@ async function createRoom(): Promise<void> {
 
   activeAction.value = 'create';
   try {
-    const payload: CreateRoomPayload = { nome };
+    const payload: CreateRoomPayload = { nome, ...(selectedTemplateId.value ? { templateId: selectedTemplateId.value } : {}) };
     const response = await api.post<ApiSuccess<Room>>('/rooms', payload);
     createSuccess.value = 'Sala criada com sucesso.';
     createdRoomId.value = response.data.data.id;
@@ -132,6 +139,7 @@ function openRoom(room: Room): void {
 
 onMounted(() => {
   void loadRooms();
+  void loadTemplates();
 });
 </script>
 
@@ -142,9 +150,7 @@ onMounted(() => {
         <h1>Suas salas</h1>
         <p v-if="authStore.user">Olá, {{ authStore.user.nome }}.</p>
       </div>
-      <button type="button" @click="router.push({ name: 'SheetTemplateBuilder' })">
-        Criar template de ficha
-      </button>
+      <div class="header-actions"><button type="button" @click="router.push({ name: 'TemplateList' })">Meus Templates de Ficha</button><button type="button" @click="router.push({ name: 'TemplateCreate' })">+ Criar Novo Template</button></div>
     </header>
 
     <section class="room-actions" aria-label="Ações de sala">
@@ -161,6 +167,11 @@ onMounted(() => {
           :disabled="activeAction !== null"
           required
         />
+        <label for="room-template">Template de ficha</label>
+        <select id="room-template" v-model="selectedTemplateId" :disabled="activeAction !== null">
+          <option value="">Nenhum template selecionado</option>
+          <option v-for="template in templates" :key="template.id" :value="template.id">{{ template.nome }}{{ template.sistema ? ` (${template.sistema})` : '' }}</option>
+        </select>
         <p v-if="createError" class="form-message error" role="alert">{{ createError }}</p>
         <p v-if="createSuccess" class="form-message success" role="status">
           {{ createSuccess }} Código de convite:
@@ -243,6 +254,8 @@ onMounted(() => {
 .page-header {
   margin-bottom: 2rem;
 }
+.header-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+.room-form select { width: 100%; padding: .65rem .75rem; border: 1px solid var(--color-border); border-radius: .4rem; background: var(--color-background); color: inherit; font: inherit; }
 .room-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));

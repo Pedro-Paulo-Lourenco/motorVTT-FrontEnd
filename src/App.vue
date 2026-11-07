@@ -62,6 +62,7 @@ onBeforeUnmount(() => {
     <nav aria-label="Navegação principal">
       <router-link to="/">Início</router-link>
       <template v-if="authStore.isAuthenticated">
+        <router-link to="/templates">Templates de Ficha</router-link>
         <div ref="profileMenu" class="profile-menu">
           <button
             type="button"

@@ -1,27 +1,44 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-import { type ApiSuccess, type SheetTemplate } from '@motor-vtt/contracts';
+import { type ApiSuccess, type SheetField, type SheetTemplate } from '@motor-vtt/contracts';
 import SectionBuilder from '@/components/SectionBuilder.vue';
 import FieldEditorModal from '@/components/FieldEditorModal.vue';
 import { useSheetTemplateStore, type BuilderField, type SheetSection } from '@/stores/sheetTemplateStore';
 import api from '@/services/api';
 const store = useSheetTemplateStore();
+const route = useRoute();
+const router = useRouter();
+const isEditing = ref(false);
 const sections: SheetSection[] = ['cabecalho', 'atributos', 'recursos', 'pericias'];
 const modalOpen = ref(false); const editing = ref<{ section: SheetSection; index: number } | null>(null); const error = ref(''); const success = ref('');
 function addField(section: SheetSection): void { editing.value = { section, index: -1 }; modalOpen.value = true; }
 function editField(section: SheetSection, index: number): void { editing.value = { section, index }; modalOpen.value = true; }
 function saveField(field: BuilderField): void { if (!editing.value) return; if (editing.value.index < 0) store.addField(editing.value.section, field); else store.updateField(editing.value.section, editing.value.index, field); closeModal(); }
 function closeModal(): void { modalOpen.value = false; editing.value = null; }
+async function loadTemplate(): Promise<void> {
+  const id = route.params.id;
+  if (typeof id !== 'string') return;
+  try {
+    const response = await api.get<ApiSuccess<SheetTemplate>>(`/sheet-templates/${encodeURIComponent(id)}`);
+    const template = response.data.data;
+    store.nome = template.nome; store.sistema = template.sistema ?? '';
+    store.camposSchema = Object.fromEntries(Object.entries(template.camposSchema).map(([section, fields]) => [section, fields.map((field: SheetField) => ({ formula: null, required: false, attributeId: null, ...field }))])) as typeof store.camposSchema;
+    isEditing.value = true;
+  } catch { error.value = 'Não foi possível carregar o template para edição.'; }
+}
 async function saveTemplate(): Promise<void> {
   error.value = ''; success.value = ''; const validationError = store.validate(); if (validationError) { error.value = validationError; return; } store.isSaving = true;
-  try { const response = await api.post<ApiSuccess<SheetTemplate>>('/api/sheet-templates', { nome: store.nome.trim(), sistema: store.sistema.trim() || null, camposSchema: store.camposSchema }); success.value = `Template "${response.data.data.nome}" criado com sucesso.`; }
+  try { const payload = { nome: store.nome.trim(), sistema: store.sistema.trim() || null, camposSchema: store.camposSchema };
+    const response = isEditing.value ? await api.put<ApiSuccess<SheetTemplate>>(`/sheet-templates/${encodeURIComponent(String(route.params.id))}`, payload) : await api.post<ApiSuccess<SheetTemplate>>('/sheet-templates', payload); success.value = `Template "${response.data.data.nome}" ${isEditing.value ? 'atualizado' : 'criado'} com sucesso.`; }
   catch (requestError) { error.value = axios.isAxiosError(requestError) && requestError.response?.status === 400 ? 'Os dados do template são inválidos. Revise os campos.' : 'Não foi possível salvar o template. Tente novamente.'; }
   finally { store.isSaving = false; }
 }
+onMounted(() => { void loadTemplate(); });
 </script>
 <template>
-  <main class="template-builder"><header class="page-header"><div><h1>Construtor de template</h1><p>Monte uma ficha customizada para sua mesa.</p></div></header>
+  <main class="template-builder"><header class="page-header"><div><h1>{{ isEditing ? 'Editar template' : 'Construtor de template' }}</h1><p>Monte uma ficha customizada para sua mesa.</p></div></header>
     <form class="template-form" :aria-busy="store.isSaving" @submit.prevent="saveTemplate">
       <div class="template-details"><label>Nome do template<input v-model="store.nome" maxlength="160" type="text" required placeholder="Ex.: Ficha de fantasia" /></label><label>Sistema (opcional)<input v-model="store.sistema" maxlength="80" type="text" placeholder="Ex.: D&amp;D 5e" /></label></div>
       <div class="sections"><SectionBuilder v-for="section in sections" :key="section" :section="section" :fields="store.camposSchema[section]" @add="addField(section)" @edit="editField(section, $event)" @remove="store.removeField(section, $event)" /></div>
