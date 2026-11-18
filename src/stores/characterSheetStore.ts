@@ -18,6 +18,7 @@ const updatedPayloadSchema = z.object({
 const socketErrorSchema = z.object({ code: z.string(), message: z.string() });
 
 function normalizeValue(value: unknown): SheetValue {
+  // Dados do socket/API não são confiáveis: conserva apenas tipos escalares e recursos entendidos pela UI.
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) return value;
   if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
     const record = value as Record<string, unknown>;
@@ -52,6 +53,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   const formulaFields = computed(() => fields.value.filter((field) => field.formula));
 
   function applyValues(nextValues: Record<string, unknown>, nextVersion?: number): void {
+    // Snapshots do servidor substituem valores e versão juntos para evitar revisões misturadas.
     values.value = normalizeValues(nextValues);
     if (nextVersion !== undefined) version.value = nextVersion;
   }
@@ -59,6 +61,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   async function persistValues(): Promise<void> {
     if (!sheetId.value) return;
     persistQueued = false;
+    // Copia o snapshot antes da espera para enviar depois as alterações feitas durante a requisição.
     const valuesToPersist = { ...values.value };
     persistRequest = api.put(`/character-sheets/${encodeURIComponent(sheetId.value)}/values`, valuesToPersist)
       .then((response) => {
@@ -80,6 +83,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   function schedulePersist(): void {
+    // Aplica debounce ao digitar; persistQueued evita perder edição feita durante uma requisição.
     persistQueued = true;
     if (persistTimer) clearTimeout(persistTimer);
     persistTimer = setTimeout(() => {
@@ -89,6 +93,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   function onSheetUpdated(payload: unknown): void {
+    // Ignora broadcasts de outras salas/fichas antes de alterar esta store.
     const parsed = updatedPayloadSchema.safeParse(payload);
     if (!parsed.success || parsed.data.sheetId !== sheetId.value || parsed.data.salaId !== roomId.value) return;
     applyValues(parsed.data.dadosPreenchidos, parsed.data.versao);
@@ -100,6 +105,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   function disconnectSocket(): void {
+    // Remove somente os handlers desta store; o socket compartilhado pode ter outros consumidores.
     socket.value?.off('sheet:updated', onSheetUpdated);
     socket.value?.off('sheet:error', onSheetError);
     socket.value = null;
@@ -114,6 +120,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   async function load(nextSheetId: string, nextRoomId: string, nextSocket?: SheetSocket): Promise<void> {
+    // Inscreve-se antes de carregar para não perder atualização ao vivo durante requisições HTTP.
     if (nextSocket) connectSocket(nextSocket, nextRoomId);
     sheetId.value = nextSheetId;
     roomId.value = nextRoomId;
@@ -151,6 +158,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
       schedulePersist();
       return;
     }
+    // Mudanças de recursos usam tempo real quando disponível; o outro ramo fornece fallback offline.
     socket.value.emit('sheet:update-resource', {
       sheetId: sheetId.value,
       salaId: roomId.value,
@@ -166,6 +174,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
         const value = calculated[field.id];
         return typeof value === 'number' && Number.isFinite(value) ? value : 0;
       } catch {
+        // Fórmulas inválidas não podem quebrar a renderização; exibem um valor neutro seguro.
         return 0;
       }
     }
@@ -173,6 +182,7 @@ export const useCharacterSheetStore = defineStore('characterSheet', () => {
   }
 
   function reset(): void {
+    // Reset cancela trabalho pendente e remove listeners antes de liberar o estado da sala.
     if (persistTimer) clearTimeout(persistTimer);
     persistTimer = undefined;
     persistQueued = false;

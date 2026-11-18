@@ -49,32 +49,33 @@ const routes = [
 ]
 
 const router = createRouter({
-    history: createWebHistory(), // cria histórico de navegação
+      // O histórico do navegador fornece URLs legíveis; o servidor deve retornar index.html.
+    history: createWebHistory(),
     routes
 })
 
 
-// TODO token de login para gerenciar permissão de rotas
+// Este guarda é uma proteção de interface; a API continua autorizando cada requisição protegida.
 router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
 
-    // 1. Se o app recarregou (F5), valida o cookie HttpOnly no backend uma vez
+    // Reidrata uma vez após recarregar; o cookie HttpOnly continua inacessível ao JavaScript.
     if (!authStore.isInitialized) {
         await authStore.checkSession()
     }
 
-    // 2. Rota exige Login, mas o usuário NÃO está autenticado
+    // Redireciona usuários não autenticados antes de entrar em rotas protegidas.
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
         return next('/login')
     }
 
-    // 3. Rota exige ser Visitante (Login/Cadastro), mas o usuário JÁ está autenticado
+    // Rotas exclusivas de visitantes não devem ser acessíveis após autenticação.
     if (to.meta.requiresGuest && authStore.isAuthenticated) {
         return next('/home') // Redireciona o usuário logado para a área interna
     }
 
-    // 4. Qualquer outra rota (como a Home "/") é liberada
+    // Rotas públicas continuam normalmente.
     next()
 })
 
-export default router // O router já vai com o guarda de navegação ativado
+export default router

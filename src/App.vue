@@ -11,6 +11,7 @@ const logoutError = ref("");
 const profileMenu = ref<HTMLElement | null>(null);
 
 onMounted(async () => {
+  // O router e a reidratação da sessão devem terminar antes de remover a tela de carregamento.
   await router.isReady();
   await nextTick();
   isLoading.value = false;
@@ -18,6 +19,7 @@ onMounted(async () => {
 });
 
 function closeProfileMenuOnOutsideClick(event: MouseEvent): void {
+  // Mantém o estado do menu local ao cabeçalho; cliques internos não devem fechá-lo.
   if (event.target instanceof Node && !profileMenu.value?.contains(event.target)) {
     isProfileMenuOpen.value = false;
   }
@@ -30,6 +32,7 @@ function closeProfileMenuOnEscape(event: KeyboardEvent): void {
 }
 
 async function handleLogout(): Promise<void> {
+  // Impede solicitações duplicadas enquanto o servidor limpa o cookie de sessão.
   if (isLoggingOut.value) return;
 
   isLoggingOut.value = true;
@@ -46,11 +49,13 @@ async function handleLogout(): Promise<void> {
 }
 
 onMounted(() => {
+  // Os ouvintes do documento implementam fechamento ao clicar fora e com a tecla Escape.
   document.addEventListener("click", closeProfileMenuOnOutsideClick);
   document.addEventListener("keydown", closeProfileMenuOnEscape);
 });
 
 onBeforeUnmount(() => {
+  // Remove os ouvintes globais para não acumular handlers ao remontar o cabeçalho.
   document.removeEventListener("click", closeProfileMenuOnOutsideClick);
   document.removeEventListener("keydown", closeProfileMenuOnEscape);
 });
@@ -99,7 +104,7 @@ onBeforeUnmount(() => {
   <p v-if="logoutError" class="logout-error" role="alert">{{ logoutError }}</p>
 
   <main>
-    <!-- Enquanto estiver checando o cookie, mostra um carregando para evitar piscar a tela -->
+    <!-- Mantém a rota aguardando a checagem do cookie para não exibir conteúdo protegido prematuramente. -->
     <div v-if="isLoading" class="loading-screen">
       <p>Carregando aplicação...</p>
     </div>

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Rota de criação/edição de templates: o store é o rascunho editável até o submit REST.
+// A tela distingue loading implícito, sucesso e erro; edição usa PUT e criação usa POST.
+// Não há debounce: cada alteração permanece local e só é persistida ao salvar.
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
@@ -29,6 +32,7 @@ async function loadTemplate(): Promise<void> {
   } catch { error.value = 'Não foi possível carregar o template para edição.'; }
 }
 async function saveTemplate(): Promise<void> {
+  // A validação do store trata campos vazios antes do REST; o backend continua validando autorização.
   error.value = ''; success.value = ''; const validationError = store.validate(); if (validationError) { error.value = validationError; return; } store.isSaving = true;
   try { const payload = { nome: store.nome.trim(), sistema: store.sistema.trim() || null, camposSchema: store.camposSchema };
     const response = isEditing.value ? await api.put<ApiSuccess<SheetTemplate>>(`/sheet-templates/${encodeURIComponent(String(route.params.id))}`, payload) : await api.post<ApiSuccess<SheetTemplate>>('/sheet-templates', payload); success.value = `Template "${response.data.data.nome}" ${isEditing.value ? 'atualizado' : 'criado'} com sucesso.`; }

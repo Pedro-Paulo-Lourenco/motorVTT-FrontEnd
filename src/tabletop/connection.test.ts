@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveTabletopSocketOrigin } from './connection';
 
 describe('origem da conexão tabletop', () => {
+  // Cobre configuração absoluta, relativa e ausente porque a origem varia por ambiente.
   it('usa a origem do backend sem transformar o caminho da API em namespace Socket.IO', () => {
     expect(resolveTabletopSocketOrigin('http://localhost:3000/api', 'http://localhost:5173'))
       .toBe('http://localhost:3000');

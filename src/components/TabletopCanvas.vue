@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// Mapa tabletop baseado em PixiJS: renderiza grade, objetos, tokens, câmera, deslocamento, zoom e arrasto.
+// As props controlam tokens, grade, permissão de edição e seleção; os eventos sincronizam Vue e interface em tempo real.
+// O mount inicializa o PixiJS de forma assíncrona; os watchers atualizam grade e tokens quando as props mudam.
+// O unmount remove listeners e observers, cancela frames pendentes e destrói os objetos Pixi para evitar vazamentos.
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   Application,
@@ -63,8 +67,8 @@ function redrawGrid(): void {
   const color = config.color ?? DEMO_GRID_DEFAULTS.color ?? '#e5d2a3';
   const opacity = config.opacity ?? DEMO_GRID_DEFAULTS.opacity ?? 0.28;
 
-  // Draw in world space, using the current camera viewport instead of the
-  // background image bounds. This keeps the grid available around any map.
+  // Desenha no espaço do mundo usando a área visível da câmera, em vez dos limites
+  // da imagem de fundo. Assim, a grade continua disponível ao redor de qualquer mapa.
   const topLeft = camera.toLocal(new Point(0, 0));
   const bottomRight = camera.toLocal(new Point(application.screen.width, application.screen.height));
   const startX = Math.floor(topLeft.x / size) * size - size;

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Dock fixo à direita que alterna ferramentas do tabletop por slots nomeados.
+// activeTab usa modelo bidirecional; configurações acionam um evento no componente pai.
+// Clicar novamente na aba ativa a fecha; maximizar altera apenas a largura do painel.
 import { computed, ref } from 'vue';
 
 export type DockTab = 'chat' | 'sheets' | 'tokens' | 'assets' | 'settings';

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Editor controlado de recurso atual/máximo com barra visual de progresso.
+// As atualizações emitidas limitam o valor atual e garantem máximo mínimo igual a um.
 import { computed } from 'vue';
 
 const props = defineProps<{ label: string; modelValue: { atual: number; maximo: number } }>();

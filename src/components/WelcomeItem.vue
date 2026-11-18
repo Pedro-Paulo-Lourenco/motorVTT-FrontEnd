@@ -1,4 +1,5 @@
 <template>
+  <!-- Estrutura com slots nomeados para ícone e título, além do slot de conteúdo padrão. -->
   <div class="item">
     <i>
       <slot name="icon"></slot>

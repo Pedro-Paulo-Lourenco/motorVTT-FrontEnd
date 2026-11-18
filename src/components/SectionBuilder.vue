@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Seção apresentacional do construtor de templates.
+// As props fornecem uma seção da ficha e seus campos; os eventos solicitam adicionar, editar e remover.
+// Manter as mutações no componente pai permite que esta tela foque na renderização ordenada.
 import { sectionLabels, type BuilderField, type SheetSection } from '@/stores/sheetTemplateStore';
 defineProps<{ section: SheetSection; fields: BuilderField[] }>();
 const emit = defineEmits<{ add: []; edit: [index: number]; remove: [index: number] }>();

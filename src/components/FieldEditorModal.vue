@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// Modal para criar ou editar um campo da ficha.
+// As props expõem estado aberto e campo em edição; salvar/fechar envia mudanças ao construtor.
+// O watcher copia o campo selecionado para manter as alterações locais até salvar.
+// Os atalhos de valor fixo e soma são convertidos em fórmulas antes da validação contratual.
 import { computed, ref, watch } from 'vue';
 import { SheetFieldType, validateFormula as parseFormula } from '@motor-vtt/contracts';
 import { newField, type BuilderField } from '@/stores/sheetTemplateStore';

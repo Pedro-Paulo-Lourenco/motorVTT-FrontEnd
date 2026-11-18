@@ -18,10 +18,12 @@ export const useAuthStore = defineStore('auth', {
     }),
     actions: {
         clearSession() {
+            // Limpa somente o estado derivado no cliente; o servidor continua sendo a fonte do cookie.
             this.user = null
             this.isAuthenticated = false
         },
         async logout() {
+            // Limpa localmente mesmo com falha de rede para não deixar uma interface autenticada obsoleta.
             try {
                 await api.post('/auth/logout')
             } finally {
@@ -47,12 +49,13 @@ export const useAuthStore = defineStore('auth', {
         },
         async checkSession() {
             try {
-                // Rota no Node que lê o cookie HttpOnly e retorna o usuário logado
+                // O backend lê o cookie HttpOnly e retorna uma identidade de usuário validada.
                 const response = await api.get<ApiSuccess<AuthResponse>>('/auth/me');
                 this.user = response.data.data.user;
                 this.isAuthenticated = true;
             } catch {
-                this.user = null; // Cookie inválido ou expirado
+                // Cookies inválidos, expirados ou indisponíveis produzem o mesmo estado anônimo.
+                this.user = null;
                 this.isAuthenticated = false;
             } finally {
                 this.isInitialized = true;

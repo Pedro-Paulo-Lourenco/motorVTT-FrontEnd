@@ -1,4 +1,5 @@
-<!-- This icon is from <https://github.com/Templarian/MaterialDesign>, distributed under Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0) license-->
+<!-- Este ícone vem de <https://github.com/Templarian/MaterialDesign>, distribuído sob a licença Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0). -->
+<!-- Ícone decorativo de ferramentas; aria-hidden remove o SVG apresentacional da navegação assistiva. -->
 <template>
   <svg
     xmlns="http://www.w3.org/2000/svg"

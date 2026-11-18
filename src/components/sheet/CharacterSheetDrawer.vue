@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// Gaveta lateral que carrega e exibe uma ficha sobre o tabletop.
+// open/sheetId/socket/roomId são observados juntos porque cada mudança pode exigir nova carga.
+// Recursos usam objeto aninhado; os demais campos emitem seu valor escalar para a store.
+// Resetar ao fechar e desmontar evita que o estado de uma ficha vá para outra ficha.
 import { onBeforeUnmount, watch } from 'vue';
 import type { Socket } from 'socket.io-client';
 import { useCharacterSheetStore } from '@/stores/characterSheetStore';

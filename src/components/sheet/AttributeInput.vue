@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Entrada numérica controlada usada pelos atributos da ficha.
+// Emite apenas números finitos e deixa armazenamento e validação para o componente pai.
 const props = defineProps<{ label: string; modelValue: number; min?: number | null; max?: number | null }>();
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>();
 

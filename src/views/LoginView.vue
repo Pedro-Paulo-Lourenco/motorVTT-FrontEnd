@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Rota pública de autenticação: o rascunho fica nos refs e só é enviado após validação.
+// O REST passa pela store; loading bloqueia repetição e erros 401/403 não revelam detalhes.
 import {ref} from "vue";
 import { useRouter } from 'vue-router';
 import {useAuthStore} from "@/stores/auth.ts";
@@ -15,6 +17,7 @@ const errorMessage = ref('');
 const isLoading = ref(false);
 
 async function handleLogin() {
+  // Validação local reduz chamadas REST, mas não substitui a autorização do servidor.
   errorMessage.value = '';
 
   if (!email.value.trim()) {
@@ -44,6 +47,7 @@ async function handleLogin() {
     // 4. Se deu certo, redireciona para a página restrita
     await router.push('/home');
   } catch (error) {
+    // O fluxo de erro converte respostas HTTP em mensagens compreensíveis para estudo/UI.
     // Tratamento de erro visual fica aqui no componente
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;

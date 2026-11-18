@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Componente inicial que apresenta a mensagem recebida.
+// msg é a única prop; o template permanece pequeno e voltado à demonstração do framework.
 defineProps<{
   msg: string
 }>()

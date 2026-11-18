@@ -19,6 +19,7 @@ import {
 
 const id = crypto.randomUUID();
 
+// Monta um payload válido representativo; os testes individuais exercitam casos extremos rejeitados.
 function makeState() {
   const now = new Date().toISOString();
   return {

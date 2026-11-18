@@ -54,6 +54,7 @@ export const defaultTemplatePreset: Record<SheetSection, BuilderField[]> = {
 };
 
 function cloneSchema(schema: Record<SheetSection, BuilderField[]>): Record<SheetSection, BuilderField[]> {
+  // O rascunho não pode compartilhar objetos de campo com presets ou templates anteriormente editados.
   return Object.fromEntries(Object.entries(schema).map(([section, fields]) => [section, fields.map((field) => ({ ...field }))])) as Record<SheetSection, BuilderField[]>;
 }
 
@@ -90,6 +91,7 @@ export const useSheetTemplateStore = defineStore('sheetTemplate', () => {
     camposSchema.value = cloneSchema(preset ?? emptySchema());
   }
   function validate(): string | null {
+    // Valida localmente antes do envio: IDs são referências em fórmulas, portanto devem ser únicos.
     if (!nome.value.trim()) return 'Informe o nome do template.';
     const ids = new Set<string>();
     for (const section of Object.keys(camposSchema.value) as SheetSection[]) for (const field of camposSchema.value[section]) {
@@ -99,6 +101,7 @@ export const useSheetTemplateStore = defineStore('sheetTemplate', () => {
       ids.add(field.id.trim());
       if (field.type === SheetFieldType.FORMULA && !field.formula?.trim()) return `Informe a fórmula de "${field.label}".`;
     }
+    // Analisa fórmulas usando todos os IDs e rejeita dependências circulares.
     for (const field of Object.values(camposSchema.value).flat()) {
       if (!field.formula) continue;
       const formulaError = parseFormula(field.formula, ids);

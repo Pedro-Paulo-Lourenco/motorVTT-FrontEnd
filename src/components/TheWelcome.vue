@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Composição inicial da página de boas-vindas com documentação, ferramentas, ecossistema, comunidade e suporte.
+// Cada bloco é delegado aos componentes WelcomeItem e aos ícones; o link do README usa um endpoint do Vite.
 import WelcomeItem from './WelcomeItem.vue'
 import DocumentationIcon from './icons/IconDocumentation.vue'
 import ToolingIcon from './icons/IconTooling.vue'

@@ -16,6 +16,7 @@ export const DEMO_GRID_DEFAULTS = gridConfigSchema.parse({
   opacity: 0.28,
 });
 
+// Estes schemas formam a barreira de confiança dos eventos socket: validam antes de alterar o estado reativo.
 export const tabletopStateSchema = z.object({
   v: z.literal(1),
   roomId: uuidSchema,
@@ -87,6 +88,7 @@ export const tokenRemoveRequestSchema = z.object({
 const safeIntegerSchema = z.number().int().safe();
 
 export const diceRollResultSchema = z.object({
+  // Os limites restringem payloads e impedem que dados inválidos do servidor sobrecarreguem a interface.
   expression: z.string().min(1).max(1000),
   repetitionCount: z.number().int().min(1).max(100),
   dicePerRepetition: z.number().int().min(1).max(100),
@@ -120,6 +122,7 @@ export const diceRollResultSchema = z.object({
 });
 
 export const tabletopMessageSchema = messageLogSchema.strict().superRefine((message, context) => {
+  // Metadados de rolagem são condicionais porque mensagens comuns não possuem resultado de dados.
   if (message.tipo !== MessageType.ROLAGEM) return;
   const roll = diceRollResultSchema.safeParse(message.metadata?.roll);
   if (!roll.success) {

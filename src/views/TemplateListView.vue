@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Rota autenticada de gestão: lista templates via GET e expõe edição/exclusão conforme a autorização
+// do servidor. Loading, vazio e erro têm estados distintos; a exclusão aguarda confirmação e 409.
+// Não há debounce porque cada ação é explícita; deletingId bloqueia somente o item em andamento.
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';

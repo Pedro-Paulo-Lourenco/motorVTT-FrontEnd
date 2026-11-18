@@ -53,3 +53,12 @@ npm test        # testes do protocolo e configuração tabletop
 npm run type-check
 npm run build
 ```
+
+## Arquitetura e documentação
+
+- [Arquitetura do frontend](docs/architecture.md)
+- [Desenvolvimento e comandos](docs/development.md)
+- [Integração com a API](docs/api-integration.md)
+- [Fluxo de autenticação](docs/auth-flow.md)
+- [Regras de negócio](docs/regras-de-negocio.md)
+- [Contexto do projeto](docs/PROJECT-CONTEXT.md)

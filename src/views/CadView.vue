@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Rota de cadastro: mantém o rascunho do formulário local, valida antes do REST
+// e mostra estados de carregamento/erro sem permitir submits concorrentes.
 import {ref, computed} from 'vue'
 import { useRouter } from 'vue-router'
 import {useAuthStore} from "@/stores/auth.ts";
@@ -26,6 +28,7 @@ const errorMessage = ref('');
 const isLoading = ref(false);
 
 async function handleCad(){
+  // A validação antecipada evita uma chamada REST inválida; o backend ainda é a autoridade.
   errorMessage.value = '';
 
   if (!userSchema.shape.nome.safeParse(form.value.nome).success) {
@@ -66,6 +69,7 @@ async function handleCad(){
 
     await router.push('/home')
   }catch(error){
+    // Erros HTTP recebem mensagem segura para a UI; erros inesperados têm fallback genérico.
     if (axios.isAxiosError(error)) {
       // Aqui dentro o TypeScript sabe exatamente o que é error.response
       errorMessage.value = error.response?.data?.error?.message || error.response?.data?.message || 'Não foi possível realizar o cadastro.';

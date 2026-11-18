@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// Renderiza o schema da ficha nos modos de jogo, edição de template ou visualização.
+// As props fornecem schema e valores; alterações, ordenação, rolagens e edição são emitidas ao componente pai.
+// Fórmulas são calculadas em todos os campos; recursos usam uma estrutura própria atual/máximo.
+// O resultado local de rolagem é apenas feedback visual; o evento oficial é enviado ao tabletop.
 import { computed, ref } from 'vue';
 import { evaluateFormulaFields, SheetFieldType, type SheetField, type SheetFieldsSchema } from '@motor-vtt/contracts';
 

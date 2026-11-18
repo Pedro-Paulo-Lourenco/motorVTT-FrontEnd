@@ -45,3 +45,30 @@ Para resolver isso:
 1. Ao iniciar a aplicação (no `main.ts` ou antes de montar o app), chama-se a ação `checkSession()` da store de autenticação.
 2. O Axios envia automaticamente o cookie `HttpOnly` para a API validar a sessão.
 3. Se o cookie for válido, a store é repovoada instantaneamente, permitindo que o usuário continue navegando sem perceber que a página foi recarregada.
+
+---
+
+## 5. Renovação e tratamento de 401
+
+O interceptor HTTP em `src/services/api.ts` tenta renovar a sessão em
+`POST /auth/refresh` quando uma requisição autenticada recebe `401`.
+
+- A renovação é compartilhada por requisições concorrentes por meio de
+  `refreshRequest`; apenas uma chamada é feita por vez.
+- Após renovar, o cliente repete a requisição original uma única vez.
+- Se a renovação falhar, o handler de sessão não autorizada limpa o Pinia e
+  redireciona para `/login`.
+- Respostas `401` dos endpoints de autenticação não acionam o fluxo recursivo
+  de refresh.
+
+As conexões Socket.IO autenticadas também podem detectar `AUTH_REQUIRED` ou
+`UNAUTHORIZED`, chamar `/auth/refresh` e tentar reconectar.
+
+## 6. Inicialização do aplicativo
+
+`main.ts` cria Pinia e registra o handler global antes de montar a aplicação.
+Depois de executar `checkSession()`, registra o Vue Router e monta `#app`.
+
+O router também executa `checkSession()` em seu guarda global caso
+`isInitialized` ainda seja falso. Isso protege navegações iniciadas sem passar
+pela ordem normal de bootstrap.

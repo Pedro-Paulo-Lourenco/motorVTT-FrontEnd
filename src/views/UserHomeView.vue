@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Rota autenticada de salas: GET carrega dados, POST cria/entra e a UI só mostra ações
+// compatíveis com o papel retornado pelo backend. activeAction funciona como loading e trava
+// duplicidade; nome/código são rascunhos locais e não há debounce para submits explícitos.
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.ts';
@@ -70,6 +73,7 @@ async function loadRooms(): Promise<void> {
   roomsError.value = '';
 
   try {
+    // REST devolve somente salas em que o usuário autenticado participa.
     const response = await api.get<ApiSuccess<Room[]>>('/rooms');
     rooms.value = response.data.data;
   } catch {
@@ -80,6 +84,7 @@ async function loadRooms(): Promise<void> {
 }
 
 async function createRoom(): Promise<void> {
+  // A validação local melhora feedback, mas criação/autorização continuam no servidor.
   if (activeAction.value !== null) return;
 
   const nome = roomName.value.trim();

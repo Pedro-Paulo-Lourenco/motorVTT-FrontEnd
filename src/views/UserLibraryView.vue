@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Rota autenticada da biblioteca: GET carrega fichas/templates e POST cria ou clona recursos.
+// loading/error/actionError separam falha inicial de falhas de ação; os botões refletem permissões
+// concedidas pelo backend. Campos do modal são rascunho local; não há debounce nas ações explícitas.
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { characterSheetSchema, sheetTemplateSchema, type SheetTemplate } from '@motor-vtt/contracts';
@@ -25,6 +28,7 @@ const templateById = computed(() => new Map(templates.value.map((template) => [t
 async function loadLibrary(): Promise<void> {
   loading.value = true; error.value = '';
   try {
+    // O schema valida a resposta REST antes de colocá-la no estado renderizado.
     const response = await api.get('/user/library');
     const parsed = z.object({ success: z.literal(true), data: z.object({ sheets: z.array(characterSheetSchema), templates: z.array(sheetTemplateSchema) }) }).parse(response.data);
     sheets.value = parsed.data.sheets; templates.value = parsed.data.templates;

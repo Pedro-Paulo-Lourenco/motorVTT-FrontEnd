@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Rota protegida /rooms/:id: carrega a sala via REST e sincroniza o tabletop por Socket.IO.
+// Loading/error são separados da conexão em tempo real; o rascunho do chat só é limpo após ACK.
+// Não há debounce: cada movimento/mensagem é validado e confirmado pelo servidor.
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
@@ -104,6 +107,7 @@ function openCharacterSheet(): void {
 const currentParticipant = computed(() =>
   participants.value.find((participant) => participant.usuarioId === authStore.user?.id),
 );
+// O papel vindo da sala controla apenas affordances da UI; cada operação ainda é autorizada pelo servidor.
 const isMaster = computed(() => currentParticipant.value?.papel === 'MESTRE');
 const canEdit = computed(() => isMaster.value && isRoomReady.value);
 const selectedToken = computed(() =>
@@ -196,6 +200,7 @@ function joinSocketRoom(socket: Socket, roomId: string): void {
 }
 
 function configureSocket(roomId: string): void {
+  // Ao trocar de sala, listeners/conexão antigos são descartados para evitar eventos duplicados.
   tabletopSocket?.removeAllListeners();
   tabletopSocket?.disconnect();
   tabletopSocket = undefined;
@@ -215,6 +220,7 @@ function configureSocket(roomId: string): void {
   socket.on('connect', () => {
     isConnected.value = true;
     refreshedAfterAuthError = false;
+    // O join ocorre após conectar; o ACK torna a sala pronta para operações.
     joinSocketRoom(socket, roomId);
   });
 

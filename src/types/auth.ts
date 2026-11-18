@@ -1,3 +1,4 @@
+// Mantém os tipos de requisição e resposta alinhados ao contrato compartilhado.
 import type { ApiSuccess as ContractApiSuccess } from '@motor-vtt/contracts';
 
 export type { AuthResponse, User, UserStatus } from '@motor-vtt/contracts';

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Modal que gerencia quais templates de ficha estão vinculados à sala.
+// roomId identifica os recursos da API; fechar dispara o encerramento e adicionar/remover atualiza listas locais.
+// Ao montar, carrega em paralelo os templates disponíveis e os já vinculados à sala.
 import { onMounted, ref } from 'vue';
 import { type ApiSuccess, type SheetTemplate } from '@motor-vtt/contracts';
 import api from '@/services/api';

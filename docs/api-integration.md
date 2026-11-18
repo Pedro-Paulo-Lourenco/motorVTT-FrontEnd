@@ -73,3 +73,48 @@ a página, os dados são sempre buscados novamente pela API com o cookie de sess
 1. **Proteção contra XSS:** O token de autenticação/sessão é gerenciado pelo navegador através de um Cookie com as flags `HttpOnly` e `Secure`.
 2. **Isolamento no Frontend:** Os scripts TypeScript no frontend não possuem acesso de leitura ou escrita ao token da sessão.
 3. **Persistência de Sessão:** Toda requisição enviada pela instância do `api` inclui automaticamente os cookies de sessão mantidos pelo navegador.
+
+---
+
+## Biblioteca de usuários e fichas
+
+| Operação | Método e caminho | Payload | Dados em `data` |
+| --- | --- | --- | --- |
+| Biblioteca pessoal | `GET /user/library` | — | `{ sheets, templates }` |
+| Criar ficha | `POST /character-sheets` | `{ templateId, nome, salaId? }` | `CharacterSheet` |
+| Duplicar ficha | `POST /character-sheets/:sheetId/clone` | — | `CharacterSheet` |
+| Ler ficha | `GET /character-sheets/:sheetId` | — | `CharacterSheet` |
+| Atualizar valores | `PUT /character-sheets/:sheetId/values` | `Record<fieldId, SheetValue>` | `CharacterSheet` |
+
+A biblioteca usa contratos compartilhados de `@motor-vtt/contracts` e valida
+respostas críticas com Zod. Os recursos são acessados pelo usuário autenticado;
+o frontend não deve deduzir propriedade ou autorização.
+
+## Templates
+
+| Operação | Método e caminho | Payload | Dados em `data` |
+| --- | --- | --- | --- |
+| Listar templates | `GET /sheet-templates` | — | `SheetTemplate[]` |
+| Ler template | `GET /sheet-templates/:templateId` | — | `SheetTemplate` |
+| Criar template | `POST /sheet-templates` | `{ nome, sistema?, camposSchema }` | `SheetTemplate` |
+| Atualizar template | `PUT /sheet-templates/:templateId` | `{ nome, sistema?, camposSchema }` | `SheetTemplate` |
+| Excluir template | `DELETE /sheet-templates/:templateId` | — | — |
+| Duplicar template | `POST /sheet-templates/:templateId/clone` | — | `SheetTemplate` |
+
+O construtor exige nome, IDs únicos de campo e fórmulas válidas. A detecção de
+dependências circulares usa os contratos compartilhados antes do envio à API.
+
+## Integração com uma sala
+
+| Operação | Método e caminho | Payload | Dados em `data` |
+| --- | --- | --- | --- |
+| Templates disponíveis na sala | `GET /rooms/:salaId/templates` | — | `SheetTemplate[]` |
+| Vincular template | `POST /rooms/:salaId/templates/:templateId` | — | — |
+| Remover template | `DELETE /rooms/:salaId/templates/:templateId` | — | — |
+| Importar ficha pessoal | `POST /rooms/:salaId/character-sheets/:sheetId/import` | — | — |
+| Vincular ficha a token | `PUT /rooms/:salaId/tokens/:tokenId/sheet` | `{ sheetId }` | — |
+
+Essas chamadas são usadas pelo lobby, pelas configurações da sala e pelo
+tabletop. A associação mestre/jogador continua sendo determinada pelo backend;
+os componentes apenas usam o participante correspondente ao usuário atual para
+controlar a apresentação.

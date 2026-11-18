@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Apresentação somente leitura de campo calculado usada pelo renderizador da ficha.
+// Exibe rótulo, fórmula opcional e o valor numérico calculado.
 defineProps<{ label: string; formula?: string | null; value: number }>();
 </script>
 

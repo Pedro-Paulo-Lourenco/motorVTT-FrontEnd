@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Exibe os participantes da sala e seu estado de presença pelo socket.
+// As props identificam participantes, usuários online e usuário atual; não há mutações ou eventos.
+// Usuário atual e mestre recebem nomes fixos; os demais jogadores são numerados pela ordem da lista.
 import type { Participant } from '@motor-vtt/contracts';
 
 const props = defineProps<{
